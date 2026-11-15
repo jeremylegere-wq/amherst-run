@@ -1,0 +1,46 @@
+{
+  "buildings": [
+    {
+      "name": "house",
+      "preset": "house",
+      "lat": 45.833319,
+      "lon": -64.213422,
+      "setback": 3
+    },
+    {
+      "name": "victorian",
+      "preset": "victorian",
+      "lat": 45.833204,
+      "lon": -64.213492,
+      "setback": 3
+    },
+    {
+      "name": "sandstone_block",
+      "preset": "sandstone_block",
+      "lat": 45.833088,
+      "lon": -64.213563,
+      "setback": 3
+    },
+    {
+      "name": "church",
+      "preset": "church",
+      "lat": 45.832972,
+      "lon": -64.213634,
+      "setback": 3
+    },
+    {
+      "name": "cottage",
+      "preset": "cottage",
+      "lat": 45.832856,
+      "lon": -64.213705,
+      "setback": 3
+    },
+    {
+      "name": "barn",
+      "preset": "barn",
+      "lat": 45.83274,
+      "lon": -64.213776,
+      "setback": 3
+    }
+  ]
+}

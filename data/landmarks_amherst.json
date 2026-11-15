@@ -1,0 +1,252 @@
+{
+ "_about": "Amherst landmarks for tools/osm_to_map.py. Each building landmark is found by OSM name/tags near the 'near' point, falling back to the nearest building within 45 m. Edit names or 'near' if the converter report says NOT FOUND or picks the wrong building. Coordinates: courthouse from waymarking.com; wind farm from thewindpower.net; others are town-centre estimates found by name. The *_anywhere entries make sure every job type gets a hub even if the downtown building is not mapped; they only label buildings generically (Bank, Post Office), never with brand names.",
+ "district": {
+  "near": [
+   45.83315,
+   -64.21318
+  ],
+  "radius": 380,
+  "materials": {
+   "sandstone": 0.55,
+   "brick": 0.45
+  }
+ },
+ "landmarks": [
+  {
+   "id": "courthouse",
+   "kind": "courthouse",
+   "label": "Court House",
+   "names": [
+    "court house",
+    "courthouse"
+   ],
+   "near": [
+    45.83315,
+    -64.21318
+   ],
+   "search": 150,
+   "material": "sandstone",
+   "height": 12.5,
+   "tower": true,
+   "role": "courthouse"
+  },
+  {
+   "id": "dominion_building",
+   "kind": "civic",
+   "label": "Dominion Building",
+   "names": [
+    "amherst town hall",
+    "town hall",
+    "dominion"
+   ],
+   "tags": {
+    "amenity": "townhall"
+   },
+   "near": [
+    45.834236,
+    -64.212805
+   ],
+   "search": 60,
+   "fallback_nearest": false,
+   "material": "sandstone",
+   "role": "deliveries",
+   "_note": "Dominion Public Building, 98 Victoria St E (1934-36, post office until 1976, now the Town Hall). Point from the NS Civic Address File; Jeremy picked it as the parcel hub (15 Nov 2026)."
+  },
+  {
+   "id": "victoria_square",
+   "kind": "square",
+   "label": "Victoria Square",
+   "names": [
+    "victoria square",
+    "victoria park"
+   ],
+   "near": [
+    45.83315,
+    -64.21318
+   ],
+   "search": 700,
+   "monument": "World Wars Memorial",
+   "trees": 8,
+   "spawn": true
+  },
+  {
+   "id": "churches",
+   "kind": "church",
+   "tags": {
+    "amenity": "place_of_worship"
+   },
+   "names": [
+    "baptist",
+    "trinity",
+    "church"
+   ],
+   "near": [
+    45.83315,
+    -64.21318
+   ],
+   "search": 1500,
+   "all": true,
+   "fallback_nearest": false
+  },
+  {
+   "id": "banks",
+   "kind": "civic",
+   "tags": {
+    "amenity": "bank"
+   },
+   "near": [
+    45.83315,
+    -64.21318
+   ],
+   "search": 500,
+   "all": true,
+   "fallback_nearest": false,
+   "material": "sandstone",
+   "role": "getaway",
+   "label": "Bank",
+   "names": [
+    "bank",
+    "credit union"
+   ]
+  },
+  {
+   "id": "bank_sandstone_corner",
+   "kind": "civic",
+   "label": "Bank",
+   "names": [
+    "rbc"
+   ],
+   "near": [
+    45.83315,
+    -64.21318
+   ],
+   "search": 600,
+   "all": false,
+   "fallback_nearest": false,
+   "material": "sandstone",
+   "height": 14.0,
+   "colour": [
+    172,
+    100,
+    78
+   ],
+   "role": "getaway"
+  },
+  {
+   "id": "post_office_anywhere",
+   "kind": "civic",
+   "label": "Post Office",
+   "tags": {
+    "amenity": "post_office"
+   },
+   "names": [
+    "post office"
+   ],
+   "near": [
+    45.826,
+    -64.218
+   ],
+   "search": 3500,
+   "fallback_nearest": false,
+   "role": "deliveries",
+   "only_if_no_role": true
+  },
+  {
+   "id": "banks_anywhere",
+   "kind": "civic",
+   "label": "Bank",
+   "tags": {
+    "amenity": "bank"
+   },
+   "names": [
+    "bank",
+    "credit union"
+   ],
+   "near": [
+    45.826,
+    -64.218
+   ],
+   "search": 3500,
+   "all": true,
+   "fallback_nearest": false,
+   "role": "getaway"
+  },
+  {
+   "id": "museum",
+   "kind": "heritage_house",
+   "label": "County Museum",
+   "names": [
+    "cumberland county museum",
+    "museum"
+   ],
+   "near": [
+    45.83315,
+    -64.21318
+   ],
+   "search": 1500,
+   "fallback_nearest": false,
+   "material": "clapboard",
+   "role": "museum"
+  },
+  {
+   "id": "armoury",
+   "kind": "armoury",
+   "label": "Armoury",
+   "names": [
+    "armoury",
+    "armory",
+    "drill hall"
+   ],
+   "near": [
+    45.83315,
+    -64.21318
+   ],
+   "search": 2500,
+   "fallback_nearest": false,
+   "material": "brick"
+  },
+  {
+   "id": "welcome_centre",
+   "kind": "visitor_centre",
+   "label": "Welcome Centre",
+   "names": [
+    "welcome centre",
+    "visitor information",
+    "visitor centre"
+   ],
+   "tags": {
+    "tourism": "information"
+   },
+   "near": [
+    45.8333,
+    -64.2131
+   ],
+   "search": 7000,
+   "fallback_nearest": false
+  },
+  {
+   "id": "wind_farm_marsh",
+   "kind": "wind_farm",
+   "at": [
+    45.83272,
+    -64.25278
+   ],
+   "count": 15,
+   "spacing": 330,
+   "hub_height": 80,
+   "blade": 48
+  },
+  {
+   "id": "wind_farm_east",
+   "kind": "wind_farm",
+   "at": [
+    45.83275,
+    -64.14656
+   ],
+   "count": 2,
+   "spacing": 330,
+   "hub_height": 99,
+   "blade": 50
+  }
+ ]
+}

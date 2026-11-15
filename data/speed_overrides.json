@@ -1,0 +1,3 @@
+{
+  "_comment": "Posted speed limits (km/h) by street name, e.g. \"Albion St S\": 40. The Nova Scotia Road Network has no speed field, so the game guesses from road class and distance from downtown. Put real signed limits here, then rebuild with: python tools/nsrn_to_roads.py data/nsrn_amherst_extract.csv data/amherst_map.json"
+}

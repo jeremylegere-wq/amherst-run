@@ -1,0 +1,572 @@
+{
+  "_about": "Building styles (looks) for build mode and custom_buildings.json: use {\"style\": \"name\"} in a spec. Made from photos of real Amherst buildings by another LLM, then checked here. Any field in a spec overrides the style. suggested_setback is a hint only.",
+  "styles": {
+    "red_sandstone_church": {
+      "preset": "church",
+      "width": 24,
+      "depth": 32,
+      "height": 8.0,
+      "roof": "gable",
+      "roof_height": 6.5,
+      "roof_colour": "shingle",
+      "material": "sandstone",
+      "colour": [
+        176,
+        128,
+        114
+      ],
+      "label": "Church",
+      "description": "Red Sandstone Church",
+      "suggested_setback": 4
+    },
+    "neoclassical_civic_building": {
+      "preset": "sandstone_block",
+      "width": 25,
+      "depth": 22,
+      "height": 11.5,
+      "roof": "flat",
+      "roof_height": 0,
+      "roof_colour": "slate",
+      "material": "sandstone",
+      "colour": [
+        194,
+        184,
+        165
+      ],
+      "label": "Town Hall",
+      "description": "Neoclassical Civic Building",
+      "suggested_setback": 2.5
+    },
+    "red_sandstone_civic_building": {
+      "preset": "sandstone_block",
+      "width": 16,
+      "depth": 18,
+      "height": 9.5,
+      "roof": "hip",
+      "roof_height": 3.0,
+      "roof_colour": "slate",
+      "material": "sandstone",
+      "colour": [
+        168,
+        134,
+        122
+      ],
+      "description": "Red Sandstone Civic Building",
+      "suggested_setback": 5
+    },
+    "gothic_red_sandstone_block": {
+      "preset": "sandstone_block",
+      "width": 20,
+      "depth": 14,
+      "height": 9.5,
+      "roof": "gable",
+      "roof_height": 3.5,
+      "roof_colour": "shingle",
+      "material": "sandstone",
+      "colour": [
+        162,
+        122,
+        112
+      ],
+      "description": "Gothic Red Sandstone Block",
+      "suggested_setback": 2.5
+    },
+    "commercial_pharmacy_plaza": {
+      "preset": "shop",
+      "width": 26,
+      "depth": 28,
+      "height": 8.0,
+      "roof": "flat",
+      "roof_height": 0,
+      "roof_colour": "slate",
+      "material": "brick",
+      "colour": [
+        196,
+        185,
+        165
+      ],
+      "label": "Pharmacy",
+      "description": "Commercial Pharmacy Plaza",
+      "suggested_setback": 18
+    },
+    "victorian_mansion": {
+      "preset": "victorian",
+      "width": 16,
+      "depth": 20,
+      "height": 7.5,
+      "roof": "hip",
+      "roof_height": 3.5,
+      "roof_colour": "shingle",
+      "material": "clapboard",
+      "colour": [
+        214,
+        212,
+        206
+      ],
+      "description": "Victorian Mansion",
+      "suggested_setback": 10
+    },
+    "two_storey_foursquare_house": {
+      "preset": "house",
+      "width": 11,
+      "depth": 12,
+      "height": 7.0,
+      "roof": "hip",
+      "roof_height": 3.0,
+      "roof_colour": [
+        168,
+        102,
+        86
+      ],
+      "material": "clapboard",
+      "colour": [
+        188,
+        168,
+        136
+      ],
+      "description": "Two-Storey Foursquare House",
+      "suggested_setback": 8
+    },
+    "attached_garage": {
+      "preset": "garage",
+      "width": 6,
+      "depth": 7,
+      "height": 3.2,
+      "roof": "hip",
+      "roof_height": 1.2,
+      "roof_colour": [
+        168,
+        102,
+        86
+      ],
+      "material": "clapboard",
+      "colour": [
+        188,
+        168,
+        136
+      ],
+      "description": "Attached Garage",
+      "suggested_setback": 9
+    },
+    "cape_cod_cottage": {
+      "preset": "cottage",
+      "width": 11,
+      "depth": 8,
+      "height": 3.5,
+      "roof": "gable",
+      "roof_height": 3.5,
+      "roof_colour": [
+        88,
+        98,
+        76
+      ],
+      "material": "clapboard",
+      "colour": [
+        216,
+        216,
+        212
+      ],
+      "description": "Cape Cod Cottage",
+      "suggested_setback": 10
+    },
+    "pale_blue_gable_cottage": {
+      "preset": "cottage",
+      "width": 10,
+      "depth": 8,
+      "height": 3.5,
+      "roof": "gable",
+      "roof_height": 3.0,
+      "roof_colour": "shingle",
+      "material": "clapboard",
+      "colour": [
+        168,
+        184,
+        198
+      ],
+      "description": "Pale Blue Gable Cottage",
+      "suggested_setback": 12
+    },
+    "pale_yellow_two_storey_house": {
+      "preset": "house",
+      "width": 8,
+      "depth": 9,
+      "height": 6.5,
+      "roof": "hip",
+      "roof_height": 2.2,
+      "roof_colour": "shingle",
+      "material": "clapboard",
+      "colour": [
+        210,
+        206,
+        178
+      ],
+      "description": "Pale Yellow Two-Storey House",
+      "suggested_setback": 8
+    },
+    "white_gable_cottage": {
+      "preset": "cottage",
+      "width": 10,
+      "depth": 8,
+      "height": 3.5,
+      "roof": "gable",
+      "roof_height": 3.5,
+      "roof_colour": "shingle",
+      "material": "clapboard",
+      "colour": [
+        214,
+        218,
+        214
+      ],
+      "description": "White Gable Cottage",
+      "suggested_setback": 8
+    },
+    "yellow_gothic_revival_museum": {
+      "preset": "victorian",
+      "width": 17,
+      "depth": 10,
+      "height": 4.0,
+      "roof": "gable",
+      "roof_height": 3.5,
+      "roof_colour": "shingle",
+      "material": "clapboard",
+      "colour": [
+        212,
+        184,
+        96
+      ],
+      "label": "Museum",
+      "description": "Yellow Gothic Revival Museum",
+      "suggested_setback": 10
+    },
+    "white_hip_roof_house": {
+      "preset": "house",
+      "width": 9.5,
+      "depth": 11,
+      "height": 6.5,
+      "roof": "hip",
+      "roof_height": 2.4,
+      "roof_colour": "shingle",
+      "material": "clapboard",
+      "colour": [
+        216,
+        218,
+        220
+      ],
+      "description": "White Hip-Roof House",
+      "suggested_setback": 6.5
+    },
+    "white_foursquare_house": {
+      "preset": "house",
+      "width": 8,
+      "depth": 9,
+      "height": 6.5,
+      "roof": "hip",
+      "roof_height": 2.4,
+      "roof_colour": [
+        108,
+        130,
+        96
+      ],
+      "material": "clapboard",
+      "colour": [
+        216,
+        218,
+        220
+      ],
+      "description": "White Foursquare House",
+      "suggested_setback": 9
+    },
+    "white_front_gable_house": {
+      "preset": "house",
+      "width": 8.5,
+      "depth": 11,
+      "height": 6.5,
+      "roof": "gable",
+      "roof_height": 3.5,
+      "roof_colour": "shingle",
+      "material": "clapboard",
+      "colour": [
+        216,
+        218,
+        218
+      ],
+      "description": "White Front-Gable House",
+      "suggested_setback": 6.5
+    },
+    "community_ice_arena": {
+      "preset": "barn",
+      "width": 44,
+      "depth": 68,
+      "height": 6.5,
+      "roof": "gable",
+      "roof_height": 4.0,
+      "roof_colour": "tin",
+      "material": "brick",
+      "colour": [
+        146,
+        148,
+        152
+      ],
+      "label": "Arena",
+      "description": "Community Ice Arena",
+      "suggested_setback": 45
+    },
+    "pale_blue_grey_foursquare_house": {
+      "preset": "house",
+      "width": 7.5,
+      "depth": 8.5,
+      "height": 6.5,
+      "roof": "hip",
+      "roof_height": 2.5,
+      "roof_colour": "shingle",
+      "material": "clapboard",
+      "colour": [
+        194,
+        200,
+        204
+      ],
+      "description": "Pale Blue-Grey Foursquare House",
+      "suggested_setback": 6
+    },
+    "light_blue_front_gable_house": {
+      "preset": "house",
+      "width": 7.5,
+      "depth": 10,
+      "height": 6.0,
+      "roof": "gable",
+      "roof_height": 3.2,
+      "roof_colour": "shingle",
+      "material": "clapboard",
+      "colour": [
+        178,
+        192,
+        202
+      ],
+      "description": "Light Blue Front-Gable House",
+      "suggested_setback": 5.5
+    },
+    "brick_high_school_main_wing": {
+      "preset": "shop",
+      "width": 48,
+      "depth": 40,
+      "height": 7.5,
+      "roof": "flat",
+      "roof_height": 0,
+      "roof_colour": "slate",
+      "material": "brick",
+      "colour": [
+        174,
+        134,
+        114
+      ],
+      "label": "High School",
+      "description": "Brick High School Main Wing",
+      "suggested_setback": 25
+    },
+    "brick_high_school_east_wing": {
+      "preset": "shop",
+      "width": 24,
+      "depth": 32,
+      "height": 7.5,
+      "roof": "flat",
+      "roof_height": 0,
+      "roof_colour": "slate",
+      "material": "brick",
+      "colour": [
+        174,
+        134,
+        114
+      ],
+      "label": "High School",
+      "description": "Brick High School East Wing",
+      "suggested_setback": 28
+    },
+    "red_brick_gothic_church": {
+      "preset": "church",
+      "width": 14,
+      "depth": 30,
+      "height": 6.5,
+      "roof": "gable",
+      "roof_height": 4.5,
+      "roof_colour": "shingle",
+      "material": "brick",
+      "colour": [
+        148,
+        68,
+        56
+      ],
+      "label": "Church",
+      "description": "Red Brick Gothic Church",
+      "suggested_setback": 10
+    },
+    "three_storey_brick_commercial_block": {
+      "preset": "shop",
+      "width": 28,
+      "depth": 22,
+      "height": 11.0,
+      "roof": "flat",
+      "roof_height": 0,
+      "roof_colour": "slate",
+      "material": "brick",
+      "colour": [
+        146,
+        86,
+        72
+      ],
+      "label": "Shops",
+      "description": "Three-Storey Brick Commercial Block",
+      "suggested_setback": 1.5
+    },
+    "red_sandstone_train_station": {
+      "preset": "sandstone_block",
+      "width": 28,
+      "depth": 11,
+      "height": 4.2,
+      "roof": "hip",
+      "roof_height": 3.5,
+      "roof_colour": [
+        148,
+        72,
+        68
+      ],
+      "material": "sandstone",
+      "colour": [
+        146,
+        106,
+        98
+      ],
+      "label": "Train Station",
+      "description": "Red Sandstone Train Station",
+      "suggested_setback": 6
+    },
+    "red_sandstone_classical_bank": {
+      "preset": "sandstone_block",
+      "width": 16,
+      "depth": 20,
+      "height": 10.5,
+      "roof": "flat",
+      "roof_height": 0,
+      "roof_colour": "slate",
+      "material": "sandstone",
+      "colour": [
+        162,
+        128,
+        120
+      ],
+      "label": "Bank",
+      "description": "Red Sandstone Classical Bank",
+      "suggested_setback": 2.0
+    },
+    "taupe_two_storey_hip_roof_house": {
+      "preset": "house",
+      "width": 7.5,
+      "depth": 9.5,
+      "height": 6.5,
+      "roof": "hip",
+      "roof_height": 2.2,
+      "roof_colour": "shingle",
+      "material": "clapboard",
+      "colour": [
+        156,
+        148,
+        138
+      ],
+      "description": "Taupe Two-Storey Hip-Roof House",
+      "suggested_setback": 8
+    },
+    "two_storey_painted_brick_commercial_block": {
+      "preset": "shop",
+      "width": 14,
+      "depth": 24,
+      "height": 7.5,
+      "roof": "flat",
+      "roof_height": 0,
+      "roof_colour": "slate",
+      "material": "brick",
+      "colour": [
+        210,
+        212,
+        214
+      ],
+      "label": "Shops",
+      "description": "Two-Storey Painted Brick Commercial Block",
+      "suggested_setback": 1.5
+    },
+    "replica_lighthouse": {
+      "preset": "cottage",
+      "width": 3.5,
+      "depth": 3.5,
+      "height": 4.5,
+      "roof": "hip",
+      "roof_height": 2.0,
+      "roof_colour": [
+        182,
+        68,
+        62
+      ],
+      "material": "clapboard",
+      "colour": [
+        216,
+        218,
+        220
+      ],
+      "label": "Lighthouse",
+      "description": "Replica Lighthouse",
+      "suggested_setback": 10
+    },
+    "brick_supermarket": {
+      "preset": "shop",
+      "width": 52,
+      "depth": 62,
+      "height": 6.5,
+      "roof": "flat",
+      "roof_height": 0,
+      "roof_colour": "slate",
+      "material": "brick",
+      "colour": [
+        158,
+        102,
+        82
+      ],
+      "label": "Supermarket",
+      "description": "Red Brick Anchor Grocery Store",
+      "suggested_setback": 65
+    },
+    "ribbed_shopping_mall": {
+      "preset": "shop",
+      "width": 175,
+      "depth": 68,
+      "height": 6.0,
+      "roof": "flat",
+      "roof_height": 0,
+      "roof_colour": "slate",
+      "material": "corrugated",
+      "colour": [
+        174,
+        166,
+        152
+      ],
+      "label": "Shopping Mall",
+      "description": "Tan Ribbed Shopping Mall Concourse",
+      "suggested_setback": 75
+    },
+    "grey_box_store": {
+      "preset": "shop",
+      "width": 36,
+      "depth": 72,
+      "height": 6.5,
+      "roof": "flat",
+      "roof_height": 0,
+      "roof_colour": "slate",
+      "material": "corrugated",
+      "colour": [
+        138,
+        144,
+        154
+      ],
+      "label": "Hardware Store",
+      "description": "Grey Retail Hardware Box Store",
+      "suggested_setback": 45
+    }
+  }
+}

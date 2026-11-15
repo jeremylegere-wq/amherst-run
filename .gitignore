@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+screenshots/*.png
+.pytest_cache/
+.ruff_cache/
+dist/
+# Raw OpenStreetMap download (2 MB, regenerate with: python tools/fetch_osm.py --convert). The converted
+# data/amherst_map.json is what the game and the tests use, and that file stays in the repo.
+data/amherst.osm

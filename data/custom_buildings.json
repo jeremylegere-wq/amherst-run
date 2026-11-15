@@ -1,0 +1,42 @@
+{
+  "buildings": [
+    {
+      "name": "Deck",
+      "preset": "garage",
+      "lat": 45.8368414,
+      "lon": -64.19785,
+      "facing": 213.5,
+      "width": 6.0,
+      "depth": 2.3,
+      "height": 1.0,
+      "roof": "flat",
+      "colour": [
+        178,
+        140,
+        98
+      ]
+    },
+    {
+      "name": "Shed",
+      "preset": "garage",
+      "lat": 45.8368814,
+      "lon": -64.1977272,
+      "facing": 123.5,
+      "width": 3.0,
+      "depth": 3.6,
+      "height": 2.2,
+      "roof": "gable",
+      "roof_height": 1.5,
+      "colour": [
+        168,
+        42,
+        38
+      ],
+      "roof_colour": [
+        80,
+        76,
+        76
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+* text=auto
+# Launch scripts must keep LF line endings or Batocera/Linux cannot run them.
+*.sh text eol=lf
+
+# Left out of the release zip (git archive). Everything else in the repo is shipped.
+.github/ export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore
+CLAUDE.md export-ignore

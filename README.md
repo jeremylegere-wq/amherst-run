@@ -1,0 +1,281 @@
+# Amherst Run
+
+[![CI](https://github.com/jeremylegere-wq/amherst-run/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremylegere-wq/amherst-run/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+A retro open-world arcade driving game set in **Amherst, Nova Scotia**.
+Cruise the real street network, take jobs from the town's landmarks and keep ahead of the police.
+Driving only, no on-foot gameplay. Pure Python + pygame, drawn as chunky 320x180 (16:9) cel-shaded polygons and scaled
+up to your screen.
+
+![Victoria Street, downtown Amherst](docs/images/downtown.png)
+
+It runs on a desktop (Windows, macOS, Linux), on **Batocera** with an Xbox-style controller, and on **Android**
+with on-screen touch controls.
+
+### What is real
+- **Streets** from the Nova Scotia Road Network: real names, one-ways, overpasses on Highway 104, speed limits.
+- **Buildings, parks and landmarks** from OpenStreetMap: the red sandstone downtown, the Court House, Victoria Square
+  and its war memorial, the Dominion Building, churches, banks, the County Museum, the Welcome Centre lighthouse, and the
+  wind turbines on the marsh skyline.
+- **Hills** from real elevation data: downtown sits on its ridge, the Tantramar marsh is flat at sea level.
+- **House numbers** from the Nova Scotia Civic Address File: parcel jobs send you to real addresses.
+- **Woods and zoning** from provincial open data, so each district looks like itself.
+- **Traffic lights and stop signs** from OpenStreetMap, which the town's traffic obeys, with right of way everywhere else.
+
+| | |
+|---|---|
+| ![A church on Victoria Street](docs/images/church.png) | ![The start: a driveway on a quiet residential street](docs/images/start.png) |
+| Downtown churches and sandstone blocks, with traffic on the right | You start in a driveway on a quiet residential street |
+| ![Police closing in](docs/images/chase.png) | ![Four player split screen](docs/images/splitscreen.png) |
+| Police chases with a wanted level | 2, 3 or 4 player split screen |
+| ![Top-down view](docs/images/top.png) | ![Weather presets](docs/images/weather.png) |
+| Top-down view (V) | Clear, overcast, coastal fog / golden hour, snow, and the flat-shaded retro style |
+
+## Contents
+[Get the game](#get-the-game) | [Play](#play) | [Controls](#controls) | [The game](#the-game) | [Maps and landmarks](#maps-and-landmarks) |
+[Development](#development) | [Making a release](#making-a-release) | [Credits and licence](#credits-and-licence)
+
+## Get the game
+Clone the repository (`git clone https://github.com/jeremylegere-wq/amherst-run.git`) or use **Code > Download ZIP** on
+GitHub, then follow the section below for your device. When there are tagged versions, `amherst-run-vX.Y.Z.zip` and
+`SHA256SUMS.txt` are on the [Releases](https://github.com/jeremylegere-wq/amherst-run/releases) page. You need Python 3.11
+or newer (CI runs 3.11, 3.12 and 3.13) and pygame; numpy is the only other dependency.
+
+## Play
+
+### Desktop (Windows, macOS, Linux)
+```
+python -m venv .venv
+.venv\Scripts\activate          # Windows   (macOS/Linux: source .venv/bin/activate)
+pip install -r requirements.txt
+python -m game.main
+```
+The game opens fullscreen and keeps the 16:9 picture undistorted (black bars if your screen is a different shape).
+Press ESC to quit. For a window instead, set `FULLSCREEN = False` in `game/config.py`; `--scale 3` then sets its size.
+
+Useful options: `--style retro` (chunky flat-shaded look with banded fog; the default `street` style is cel-shaded with ink outlines),
+`--view top` (start top-down), `--traffic 0` (no civilian cars), `--no-cops` (cop-free), `--no-zoning`, `--flat` (ignore real elevation: faster), `--weather snow` (clear/overcast/fog/golden/snow), `--heat 2` (start with two wanted stars),
+`--seed 7` (different traffic), `--map data/sample_map.json` (the small test town), `--no-joy` (ignore gamepads),
+`--version`.
+
+### Batocera (Xbox-style controller)
+1. Copy the `amherst-run` folder to `/userdata/roms/ports/` (from a PC: `\\batocera\share\roms\ports\` or
+   `smb://batocera.local/share/roms/ports/`).
+2. Put `AmherstRun.sh` where EmulationStation can see it: it is inside the folder, and you can copy it up one level
+   into `ports/`. It must keep Unix (LF) line endings.
+3. In EmulationStation, update the game lists (Start > Game Settings > Update Gamelists) and launch **AmherstRun**.
+
+Batocera needs `python3` with `pygame`.
+
+### Android (Pydroid 3)
+1. Install **Pydroid 3** from the Play Store (and `pygame` from its Pip menu if prompted).
+2. Copy the `amherst-run` folder onto the phone.
+3. Open `play_android.py` in Pydroid 3 and press play.
+
+Touch buttons appear automatically. A paired Bluetooth controller also works. `play_android.py` starts with `--debug-input`,
+which shows a yellow status line at the bottom (controller found, buttons pressed); delete that flag from the file once the
+controls behave. On a desktop, `python -m game.main --touch` shows the same buttons and mouse clicks act as touches.
+
+## Start screen and multiplayer
+
+The game opens on a start screen: **1 Player** is the full game; **2, 3 or 4 Player** is split screen free roam with no
+police, no jobs and no damage. Use the arrows or W/S and Enter (or 1-4), a gamepad D-pad and A, or tap/click an option.
+ESC goes back to the start screen. `--players 2|3|4` jumps straight in; `--no-menu` jumps into 1 player.
+With 3 players, player 1 gets the whole top half and players 2 and 3 share the bottom.
+
+| Player | Vehicle | Keyboard | Gamepad |
+|---|---|---|---|
+| 1 | boxy retro SUV (yellow, white roof) | W/A/S/D, Space = handbrake, Left Shift = hop, R = respawn | pad 1 when there are as many pads as players |
+| 2 | compact crossover (white) | Arrows, Right Ctrl / Keypad 0 = handbrake, Right Shift = hop, Backspace = respawn | pad 2 |
+| 3 | mid-size SUV (grey) | - | pad 3 |
+| 4 | quad cab pickup (black) | - | pad 4 |
+
+Pads go to the LAST players first: with two players and one pad the pad drives player 2 and the keyboard keeps player 1.
+On a pad A is handbrake, **LB or RB hop**, Start respawns. A freight train passes along the rail line every few minutes
+(`--no-train` turns it off). The vehicles are original low-poly designs with no badges.
+
+### Hop and drift boost (all modes)
+
+Tap a bumper to hop. Hop while steering at speed and you start a power slide: the car swings out and turns tighter, and
+sparks show the charge (blue, then orange, then purple). Keep holding the bumper, then let go for a speed boost with a
+flame out of the back. Steering into the turn tightens it; steering out widens it.
+
+## Controls
+
+| Action | Keyboard | Xbox-style controller | Touch |
+|---|---|---|---|
+| Steer | Left / Right, A / D | Left stick or D-pad left/right | `<` and `>` |
+| Throttle | Up, W | Left stick or D-pad up | GAS |
+| Brake / reverse | Down, S | Left stick or D-pad down | BRAKE |
+| Handbrake | Space | A | HAND |
+| 3D / top-down view | V | B | VIEW |
+| Overview map (street names) | M | Y | MAP |
+| Respawn | R | Start | RESET |
+| Quit | Esc | Back / Select | Android back button |
+| Hop / drift boost | Shift | LB or RB | - |
+| FPS and polygon count | F3 | - | - |
+| Minimap on/off | F2 | - | - |
+| Weather: clear, overcast, coastal fog, golden hour, snow | F4 | - | - |
+| Build mode (see below) | B | - | - |
+| Add a wanted star (debug) | H | - | - |
+| Cop-free mode on/off | C | X | - |
+
+Only real gamepads are used (at least 2 axes and 6 buttons); phone sensors that pretend to be joysticks are ignored.
+
+## The game
+**Jobs.** Glowing beacons mark jobs at the landmarks. Pull up and stop inside one:
+- **Orange - Dominion Building (the old post office): Parcel Run.** Deliver 1-3 parcels to real street addresses before
+  the clock runs out. Fragile parcels break if you take 25% damage.
+- **Red - Bank: Getaway.** You start with three stars. Lose the police within two minutes.
+- **Green - Victoria Square / Museum: Heritage Tour.** A checkpoint race past the town's landmarks.
+- **Blue - Court House: Pay your fines.** $100 per wanted star clears the police off your back.
+
+Jobs pay cash plus a time bonus. You can't take a job while wanted, and getting busted costs $100. Follow the arrow under
+the timer; the target also sits on the edge of the radar.
+
+**The town.** Civilian cars drive the real road network on the right at the speed limit (a little over or under, driver by
+driver), slowing for corners and for cars ahead. They stop on red, make a full stop at stop signs, give way from side
+streets, take turns at four-way junctions, wait for oncoming traffic before turning left and don't block a jammed
+junction. They are created and removed around you. Hit one and you get heat (red boxes, top right). More heat means more police: they path
+along the roads, or cut straight across when they can see you. Stay out of sight for about 8 seconds and the heat drains.
+Let them box you in while nearly stopped and you are BUSTED. Damage (bottom right) slows the car; at 100% it is WRECKED.
+
+**Props.** Trees and lamp posts come from OpenStreetMap where mapped and are added along every street where not (the same
+every time). They are solid, so mind the trunks.
+
+## Maps and landmarks
+The release includes a converted Amherst map (`data/amherst_map.json`) and the landmark list
+(`data/landmarks_amherst.json`): the Court House (with an optional clock tower), Victoria Square and its war memorial, the
+Dominion Building, banks, churches, the County Museum, the Welcome Centre lighthouse, the wind farms on the skyline and a
+red sandstone downtown. You start in a driveway on a residential street in the north-east of town; the start point and
+any hand-placed trees live in `data/map_edits.json` (see [docs/EDITOR.md](docs/EDITOR.md)). Press M in the game for the labelled town map. The round minimap (top right) shows the streets around you, the green sign
+at the bottom names the street you are on and the white "MAX" sign shows its limit. Highway 104 crosses Highway 2 (Exit 4)
+and Highway 6 (Exit 3) on overpasses you can drive over and under.
+
+Streets come from the Nova Scotia Road Network (names, one-ways, bridges); buildings, parks and landmarks come from
+OpenStreetMap. The NSRN has no speed limits, so limits are estimates by road class; set real ones in
+`data/speed_overrides.json`.
+
+### Street detail
+Roads are painted the Canadian way: yellow centre lines on two-way arterials, yellow dashes on collectors, white lane
+lines on three-lane roads, white edge lines (yellow on the left of one-way carriageways) on Highway 104 and its ramps,
+and no paint on local streets, driveways or gravel. Gravel roads (NSRN "Unpaved" and tracks) are tan. Streets have
+concrete sidewalks, and the sandstone downtown has red brick ones. OpenStreetMap's real stop signs, traffic signals,
+crosswalks and rail crossings become stop bars with signs, signal heads that take turns, zebra crosswalks and
+crossbucks. Hydrants, and benches and bins downtown, are placed along the streets by rule because Amherst's OSM has
+none of them mapped (the OSM data has no sidewalks or footpaths either, so those are drawn by rule too). The paint rules
+are in `game/streetdetail.py`; the traffic rules at junctions (lights in step with the signal heads you see) are in
+`game/junctions.py`.
+
+### Hills (real elevation)
+Amherst is not flat. `data/elevation.json` (included) holds real ground heights every 25 m; the game draws the land, and
+roads, buildings, trees and cars sit on it, you speed up downhill and slow uphill. `--flat` ignores it (faster on slow
+machines). Refresh it with `python tools/fetch_elevation.py` (needs internet); `python update_map.py` fetches it the first
+time if it is missing.
+`--radius 4000` limits it to the area around the spawn point; `--from-asc FILE` uses your own ESRI ASCII grid in
+latitude/longitude. Hills are stretched 1.5x (`VERTICAL_SCALE` in `game/terrain.py`) so they read on a small screen.
+
+### Weather and time of day
+`--weather overcast|fog|golden|snow` (or **F4** in the game) switches between a clear day, grey maritime overcast, coastal
+fog that hides the skyline, golden hour with long warm shadows, and winter snow with falling flakes. The presets are
+style data in `WEATHER` in `game/render3d.py`, so they work with both the street and the retro style.
+
+### Real house numbers
+`data/addresses.json` (included) has the Nova Scotia Civic Address File points for the map area. Parcel jobs use the real
+number nearest the drop point on the same street. Refresh it with `python tools/fetch_addresses.py`.
+
+### Map editor
+Fix the map with the mouse (move, reshape, delete or add buildings and roads, find buildings on roads):
+`python tools/map_editor.py`. Edits survive re-downloading the map. See [docs/EDITOR.md](docs/EDITOR.md).
+
+### Build your own buildings
+Press **B** in the game to drop buildings beside the street (presets, roofs, saved automatically), or edit
+`data/custom_buildings.json`. The full guide is in [docs/BUILDING.md](docs/BUILDING.md).
+
+To rebuild the map from OpenStreetMap yourself (the NSRN streets are applied automatically):
+```
+python tools/fetch_osm.py --convert      # downloads data/amherst.osm and writes data/amherst_map.json
+```
+Options: `--radius 4000` (bigger area; the default is a 6 x 6 km square over downtown, the south end and Highway 104),
+`--bbox SOUTH WEST NORTH EAST`, `--place "Springhill, Nova Scotia"`, `--print-query`. The converter prints a report of which
+landmarks it found; if one is `NOT FOUND` or lands on the wrong building, edit its `names` or `near` in the landmark file and
+convert again. If the download fails (busy servers), run the query at https://overpass-turbo.eu, export raw OSM data to
+`data/amherst.osm`, then `python tools/osm_to_map.py data/amherst.osm data/amherst_map.json`.
+`data/amherst.osm` is not kept in the repository because it is large and easy to regenerate.
+
+## Zoning and cop-free mode
+
+- `data/zoning.json` holds the town's zoning districts (from the 2025.11.24 zoning map, Prov. of NS) on a 10 m grid.
+  When the game loads the map, plain buildings take the look of their zone so each district reads as one place.
+  Re-make it with `python tools/zoning_from_pdf.py Amherst_Zoning.pdf` (needs poppler's `pdftoppm`). The extraction is
+  approximate. Skip it with `--no-zoning`.
+- `--no-cops` (or **C** in game) turns the police, wanted level and busting off, for a relaxed drive.
+
+### Real woods
+
+`data/landcover.json` (included) comes from the Nova Scotia Topographic Database land cover layer, and the game plants
+trees in the real treed areas. Refresh it with `python tools/fetch_landcover.py` (standard library only). If the download is blocked, save the GeoJSON from
+`https://data.novascotia.ca/api/geospatial/xed8-vvg5?method=export&format=GeoJSON` and run
+`python tools/fetch_landcover.py that_file.json`. Credit: "Contains information licensed under the Open Government
+Licence - Nova Scotia."
+
+## Development
+Project layout: `game/` (the game), `tools/` (map pipeline, autopilot, benchmarks, release scripts), `tests/`, `data/`.
+
+### Run the checks locally
+These are the same commands CI runs. Set the dummy video/audio drivers so no window or sound card is needed
+(Windows PowerShell: `$env:SDL_VIDEODRIVER="dummy"; $env:SDL_AUDIODRIVER="dummy"`).
+```
+pip install -r requirements.txt
+export SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy
+
+python -m unittest discover -s tests -v                                   # all tests
+python -m game.main --frames 120 --autodrive                              # headless smoke run
+python -m game.main --map data/sample_map.json --style retro --frames 120 --autodrive
+pip install ruff==0.16.9 && ruff check --select E9,F63,F7,F82 .          # syntax errors / undefined names
+```
+Handy extras: `python -m game.main --frames 240 --autodrive --screenshot screenshots/drive.png` saves a frame;
+`python tools/autopilot.py` has a robot play the jobs to check the timers are fair; `python tools/bench_render.py` and
+`python tools/bench_town.py [data/amherst_map.json]` benchmark the renderer (budget: 33 ms per frame for everything).
+
+### Continuous integration
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`: the unit tests on Linux (Python 3.11, 3.12,
+3.13) and Windows (3.13), the headless smoke runs, the `ruff` lint, and a check that the release zip builds, has the right
+contents and runs when unpacked. Third-party actions are pinned to commit SHAs and kept current by Dependabot.
+
+## Making a release
+Versions follow [Semantic Versioning](https://semver.org/) (`0.x` while the game is still being tuned; a breaking change to
+controls, save data or map format bumps the minor version until 1.0). The single source of truth is `__version__` in
+`game/__init__.py`. Git tags are `v` plus that version, for example `v0.2.0`, or `v0.2.0-rc.1` for a pre-release.
+
+1. Make sure `main` is green in CI and your working copy is up to date: `git checkout main && git pull`.
+2. In `CHANGELOG.md`, move the "Unreleased" items into a new `## [X.Y.Z] - YYYY-MM-DD` section and update the link references.
+3. Set `__version__ = "X.Y.Z"` in `game/__init__.py`.
+4. Check everything agrees (prints the release notes, fails if the version, tag or changelog disagree):
+   `python tools/release_notes.py X.Y.Z`
+5. Commit and push to `main`: `git commit -am "Release vX.Y.Z" && git push`. Wait for CI to pass.
+6. Tag and push the tag: `git tag -a vX.Y.Z -m "Amherst Run X.Y.Z" && git push origin vX.Y.Z`.
+7. Watch the **Release** run under the repository's Actions tab. It re-runs CI, refuses to continue if the tag is not on `main`
+   or does not match the version and changelog, builds `amherst-run-vX.Y.Z.zip` plus `SHA256SUMS.txt` from the tagged commit,
+   and creates a **draft** GitHub Release with the changelog section as its notes.
+8. Open the draft under Releases, check the notes and the two attached files (download the zip, unpack it, run
+   `python -m game.main --frames 60 --autodrive`), then press **Publish release**.
+
+If a release run fails before the draft exists, fix the problem, then delete the tag (`git push --delete origin vX.Y.Z` and
+`git tag -d vX.Y.Z`) and tag again. To build the zip locally from committed files: `tools/build_release_zip.sh X.Y.Z dist`.
+
+## Credits and licence
+Map data (c) OpenStreetMap contributors, available under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/).
+Road data: Nova Scotia Road Network, from the Province of Nova Scotia open data portal, used under the Open Government
+Licence - Nova Scotia. Check the licence page for the exact attribution wording before you publish.
+Civic addresses (`tools/fetch_addresses.py`, `data/addresses.json`): Nova Scotia Civic Address File, from the Province of
+Nova Scotia open data portal. Contains information licensed under the Open Government Licence - Nova Scotia.
+Elevation (`data/elevation.json`, `tools/fetch_elevation.py`): Terrain Tiles on AWS (Mapzen; sources include NRCan CDEM and
+SRTM).
+Land cover and zoning: Province of Nova Scotia; contains information licensed under the Open Government Licence - Nova Scotia.
+All code, art and names in this project are original.
+
+**Licence.** The code is released under the [MIT License](LICENSE). The data files in `data/` keep their own licences
+listed above (OpenStreetMap data stays under the ODbL, provincial data under the Open Government Licence - Nova Scotia):
+if you share the map data, keep those credits with it.
