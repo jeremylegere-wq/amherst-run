@@ -9,21 +9,8 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
-### Fixed
-- `tools/fetch_elevation.py` crashed on its first real run (`Surface.convert` needs a window). Real elevation is now
-  downloaded (`data/elevation.json`) and on by default; `--flat` turns it off. Terrain lookups are faster.
-- Loading the map took ~3 s longer with the 70 building edits (each edit rescanned every building); now 0.07 s.
-- Cars and props next to a wall no longer get painted behind it (or show through it) when seen at a slant.
-- 70 buildings that sat on roads in the real Amherst map were pushed clear (`data/map_edits.json`, made with
-  `tools/map_editor.py --fix-all`). 10 are left for hand editing.
-- Traffic no longer rear-ends a queue: braking for a stopped car ahead is no longer smoothed (it lagged ~0.5 s).
-- Two human cars hitting each other crashed the game (`Car` had no `kind`). Fixed, with a regression test.
-- On Batocera the Xbox pad numbers its buttons from 1 (A=1, Start=8), so pressing A on the start screen hit the "B = quit"
-  button and the game closed with no error. Button numbers now come from SDL's controller config (`game/padmap.py`).
-- Errors are now written to `amherst-run-crash.log` (game folder, home, /userdata) and shown on screen (Batocera and Android hide them), and 2 player/menu code no longer
-  depends on newer pygame calls (`get_instance_id`, `FINGERDOWN`).
-- Buildings, cars and trees drew through each other: the far-to-near sort of scene objects had been lost from the renderer.
-  It is back, with a test (`test_objects_are_painted_far_to_near`) so it cannot disappear unnoticed.
+## [0.1.0] - 2026-11-15
+First public release.
 
 ### Added
 - The game now starts in a driveway in a residential street off Willow St, nose towards a hand-modelled house: light blue siding, steep shingle gable roof, brick chimney, wooden deck, red shed, paved
@@ -89,23 +76,6 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 - Your own buildings: `data/custom_buildings.json`, presets, gable/hip/mansard roofs, an in-game build mode (B) and
   `python -m game.builder` to check a file. See `docs/BUILDING.md`.
 - `data/speed_overrides.json` to set real posted limits by street name.
-
-### Changed
-- The bundled map now covers downtown Amherst (Court House, churches, banks, Town Hall, train station) with NSRN streets.
-- `update_map.py` re-downloads OpenStreetMap and rebuilds the map in one step.
-- Traffic obeys speed limits (50 km/h in town, 80 on rural arterials, 100 on Highway 104) with a little variation
-  per driver. The NSRN has no speed field, so these limits are estimates from road class and distance from downtown.
-- Map roads now come from the NSRN instead of OpenStreetMap (buildings, parks and landmarks still come from OSM).
-
-### Fixed
-- The sandstone-corner bank entry in the landmark file matched every bank; it now matches by name only.
-- Buildings no longer draw through one another or through cars: each wall piece is depth-sorted on its own.
-
-## [0.1.0] - 2026-11-14
-
-First public release.
-
-### Added
 - Retro open-world driving game set in Amherst, Nova Scotia: arcade car physics, a 3D polygon chase view in
   a cel-shaded "street" style (plus the original flat-shaded `retro` style), top-down and whole-town map views.
 - Map pipeline from OpenStreetMap (`tools/fetch_osm.py`, `tools/osm_to_map.py`) with real landmarks
@@ -120,7 +90,31 @@ First public release.
 - GitHub Actions CI and a tag-driven release workflow.
 
 ### Changed
+- The bundled map now covers downtown Amherst (Court House, churches, banks, Town Hall, train station) with NSRN streets.
+- `update_map.py` re-downloads OpenStreetMap and rebuilds the map in one step.
+- Traffic obeys speed limits (50 km/h in town, 80 on rural arterials, 100 on Highway 104) with a little variation
+  per driver. The NSRN has no speed field, so these limits are estimates from road class and distance from downtown.
+- Map roads now come from the NSRN instead of OpenStreetMap (buildings, parks and landmarks still come from OSM).
 - AI traffic steers and changes speed smoothly instead of snapping between targets.
+
+### Fixed
+- `tools/fetch_elevation.py` crashed on its first real run (`Surface.convert` needs a window). Real elevation is now
+  downloaded (`data/elevation.json`) and on by default; `--flat` turns it off. Terrain lookups are faster.
+- Loading the map took ~3 s longer with the 70 building edits (each edit rescanned every building); now 0.07 s.
+- Cars and props next to a wall no longer get painted behind it (or show through it) when seen at a slant.
+- 70 buildings that sat on roads in the real Amherst map were pushed clear (`data/map_edits.json`, made with
+  `tools/map_editor.py --fix-all`). 10 are left for hand editing.
+- Traffic no longer rear-ends a queue: braking for a stopped car ahead is no longer smoothed (it lagged ~0.5 s).
+- Two human cars hitting each other crashed the game (`Car` had no `kind`). Fixed, with a regression test.
+- On Batocera the Xbox pad numbers its buttons from 1 (A=1, Start=8), so pressing A on the start screen hit the "B = quit"
+  button and the game closed with no error. Button numbers now come from SDL's controller config (`game/padmap.py`).
+- Errors are now written to `amherst-run-crash.log` (game folder, home, /userdata) and shown on screen (Batocera and Android hide them), and 2 player/menu code no longer
+  depends on newer pygame calls (`get_instance_id`, `FINGERDOWN`).
+- Buildings, cars and trees drew through each other: the far-to-near sort of scene objects had been lost from the renderer.
+  It is back, with a test (`test_objects_are_painted_far_to_near`) so it cannot disappear unnoticed.
+
+- The sandstone-corner bank entry in the landmark file matched every bank; it now matches by name only.
+- Buildings no longer draw through one another or through cars: each wall piece is depth-sorted on its own.
 
 [Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/jeremylegere-wq/amherst-run/releases/tag/v0.1.0
