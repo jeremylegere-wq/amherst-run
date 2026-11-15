@@ -9,3 +9,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # requirements.txt holds MINIMUM versions, kept low on purpose: Batocera ships pygame 2.5.2 with Python 3.11,
+    # and older numpy. Raising them would stop the game installing there, so Dependabot must not bump them.
+    ignore:
+      - dependency-name: pygame
+      - dependency-name: numpy
