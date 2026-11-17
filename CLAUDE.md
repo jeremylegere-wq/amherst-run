@@ -132,7 +132,7 @@ amherst-run/
 - [ ] Settings for resolution scale and palette
 
 ## Status (updated 15 Nov 2026)
-- Everything below is built and tested headless (404 tests, `python -m unittest discover -s tests`). Still needs hands-on
+- Everything below is built and tested headless (416 tests, `python -m unittest discover -s tests`). Still needs hands-on
   playtesting: handling, drift/boost feel, 4 player on Batocera, and the map editor with a real mouse.
 - Runs on: Windows/macOS/Linux laptop (development), Batocera (Xbox pads, pygame 2.5.2, Python 3.11), Android/Pydroid.
 - Frame cost (sandbox): ~2-3 ms render, ~17,500 props (about 15,000 trees). A basic laptop may be 2-4x slower.
@@ -230,6 +230,12 @@ amherst-run/
 - Releases: v0.1.0 (15 Nov 2026), v0.2.0 (17 Nov 2026: LiDAR heights, house types, heritage buildings). Before a release
   whose look changed, run `python tools/readme_shots.py` (regenerates docs/images; the LiDAR picture needs
   data/.lidar_cache). The README "How Amherst was built" section explains the data layers and credits Claude Code.
+- 17 Nov 2026 fixes: hill occlusion (`_compute_horizon` / `_occ_row` in render3d: per-column horizon from land
+  sampled every 5 m, objects and road pieces beyond a crest clipped with set_clip; key detail: use each object's
+  NEAREST point distance, or road pieces clip themselves). Buildings sit on their HIGHEST corner (`_building_ground`).
+  map_editor fix-all: push -> cut lanes/driveways back (`cut_road_outside`) -> trim building to the road edge
+  (`trim_clear`) -> drop buildings wholly inside another (`swallowed`); 674 only partly overlaps 675, left alone.
+  Signs/signals/crossbucks: `streetdetail._off_road` keeps poles off roads. The editor now writes `_note` back.
 - Benchmarks drift with machine load (17 Nov: street downtown render ~32 ms vs ~17 ms on 15 Nov, same code): compare
   only back-to-back runs.
 - Painter's algorithm: scene objects must be sorted far-to-near (regression test exists). Walls are 12 m pieces;
