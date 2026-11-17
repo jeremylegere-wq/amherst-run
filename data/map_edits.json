@@ -2423,7 +2423,8 @@
      88
     ],
     "chimney": 0.4,
-    "_note": "start house: 1.5-storey Cape, light blue siding, steep shingle gable, brick chimney"
+    "_note": "start house: 1.5-storey Cape, light blue siding, steep shingle gable, brick chimney",
+    "arch": "cape"
    }
   ]
  },

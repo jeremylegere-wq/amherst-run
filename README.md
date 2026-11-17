@@ -190,6 +190,13 @@ Natural Resources Canada's 1 m LiDAR elevation models (survey NS-NSDNR_2020). Re
 250 MB the first time, cached in `data/.lidar_cache`), lines the OpenStreetMap outlines up with the LiDAR roofs, and fits
 each roof. Hand edits in `data/map_edits.json` still win over the measurements.
 
+### Houses
+Homes are sorted into Amherst's common types from their measured height, roof pitch, footprint and zoning district
+(`game/archetypes.py`): garage, mini-home, bungalow, storey-and-a-half cape, two-storey (about half with a front veranda)
+and apartment block. Up close (45 m) each type gets a foundation, trimmed windows by storey, a front door on the
+street side, siding up into the gables with an attic window, and verandas; further away they keep the cheap look.
+Set a house's type by hand with `"arch"` in `data/map_edits.json` (see [docs/BUILDING.md](docs/BUILDING.md)).
+
 ### Real house numbers
 `data/addresses.json` (included) has the Nova Scotia Civic Address File points for the map area. Parcel jobs use the real
 number nearest the drop point on the same street. Refresh it with `python tools/fetch_addresses.py`.

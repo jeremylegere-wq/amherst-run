@@ -25,6 +25,7 @@ import pygame
 
 from . import config as C
 from . import streetdetail as SD
+from . import archetypes
 from .builder import face_normal, roof_faces
 from .car import MODELS, PLAYER_PALETTE
 from .world import CELL
@@ -81,6 +82,9 @@ STYLES = {
         "sidewalk": (C.PALETTE["road_edge"], C.PALETTE["road_edge"], (150, 96, 80)),     # edge, concrete, brick
         "sidewalk_w": (0.35, 0.9, 1.2),
         "car_shadow": SHADOW_RGB, "ink": None, "ink_until_fog": 0, "windows": None,
+        "house": {"foundation": (112, 110, 104), "trim": (196, 192, 180), "glass": (62, 78, 110),
+                  "doors": [(110, 46, 40), (52, 64, 92), (70, 88, 66)], "garage_door": (176, 172, 160),
+                  "porch": (150, 128, 96), "porch_roof": (92, 90, 96)},
         "clouds": 0, "cast_shadows": None,
         "trunk": (96, 72, 52), "lamp": (70, 72, 84), "lamp_head": (220, 214, 170),
         "tree_cols": [((90, 130, 70), (64, 100, 56)), ((104, 140, 80), (72, 108, 60)), ((80, 120, 74), (58, 92, 58))],
@@ -105,6 +109,9 @@ STYLES = {
         "sidewalk": ((170, 162, 148), (206, 202, 194), (190, 112, 92)),     # shoulder, concrete, red brick
         "sidewalk_w": (0.7, 1.8, 2.6),
         "car_shadow": None, "ink": (22, 18, 40), "ink_until_fog": 4, "windows": (40, 60, 118),
+        "house": {"foundation": (150, 146, 140), "trim": (250, 250, 244), "glass": (52, 84, 150),
+                  "doors": [(196, 44, 48), (36, 70, 150), (40, 120, 84), (250, 250, 244)],
+                  "garage_door": (236, 234, 226), "porch": (204, 168, 118), "porch_roof": (72, 76, 92)},
         "clouds": 9, "cast_shadows": (24, 22, 72, 120),     # RGBA, drawn see-through
         "trunk": (124, 80, 46), "lamp": (64, 66, 96), "lamp_head": (255, 246, 190),
         "tree_cols": [((98, 206, 72), (44, 138, 66)), ((150, 216, 58), (72, 150, 52)), ((72, 192, 112), (34, 124, 88))],
@@ -173,6 +180,7 @@ def grade_rgb(rgb, grade):
     return (int(max(0, min(255, r))), int(max(0, min(255, g))), int(max(0, min(255, b))))
 
 
+HOUSE_DETAIL = 45.0       # metres: doors, windows, foundations and porches on houses (game/archetypes.py) inside this
 PROP_DIST = 130.0         # trees and lamps further than this are not drawn
 DETAIL_DIST = 95.0        # signs, hydrants, benches and the like
 DETAIL_KINDS = frozenset(SD.FURNITURE_KINDS)
@@ -464,6 +472,7 @@ class Renderer3D:
         """Per building: (cx, cy, height, colour index, walls, footprint, radius)."""
         self.buildings = {}
         self.extras = {}            # building index -> material / landmark details
+        self._houses = {}           # building index -> house details (game/archetypes.py), worked out when first close
         for i, b in enumerate(self.world.buildings):
             self._prep_building(i, b)
 
@@ -472,6 +481,7 @@ class Renderer3D:
         self.buildings.pop(i, None)
         self._bground.pop(i, None)
         self.extras.pop(i, None)
+        self._houses.pop(i, None)
         self.graffiti.pop(i, None)
         self._prep_building(i, self.world.buildings[i])
 
@@ -531,6 +541,9 @@ class Renderer3D:
                            for k in range(len(pts)))) / 2
             if h < 3.0 or not graffiti_ok(self.world.buildings[i], area):
                 continue
+            house = archetypes.classify(self.world.buildings[i], i)
+            if house and house["kind"] != "apartment":
+                continue                                        # nobody tags the side of a family home
             for wi, (x0, y0, x1, y1, _nx, _ny, _sh) in enumerate(walls):
                 L = math.hypot(x1 - x0, y1 - y0)
                 if L < 5.0:
@@ -1284,14 +1297,29 @@ class Renderer3D:
         if has_top:
             objs.append(((best - 0.5) if best is not None else dist, 5, idx))   # roof and towers go on top of the walls
 
+    def _house(self, idx):
+        """House type and front wall for building idx (None for non-houses). Worked out once, the first time it is
+        drawn up close, so loading the map stays fast."""
+        if idx not in self._houses:
+            info = archetypes.classify(self.world.buildings[idx], idx)
+            if info is not None and info["kind"] != "apartment":
+                walls = self.buildings[idx][4]
+                info = dict(info, front=archetypes.front_wall(walls, self.world.on_road))
+                info["door"] = 0.3 + 0.4 * archetypes._coin(idx, 3)        # where along the front wall the door sits
+            elif info is not None:
+                info = None                                                 # apartments keep the ribbon windows
+            self._houses[idx] = info
+        return self._houses[idx]
+
     def _building_style(self, idx, b, dist):
         _cx, _cy, h, base, _walls, fp, _rad = b
         ex = self.extras.get(idx)
         landmark = ex["landmark"] if ex else None
         arched = landmark in ("courthouse", "civic", "church") and dist < 80.0
+        house = self._house(idx) if dist < HOUSE_DETAIL and self.st.get("house") else None
         return {
-            "h": h, "base": base, "ex": ex, "landmark": landmark, "arched": arched,
-            "win": self.st["windows"] if dist < 90.0 and h > 3.5 and not arched else None,
+            "h": h, "base": base, "ex": ex, "landmark": landmark, "arched": arched, "house": house,
+            "win": self.st["windows"] if dist < 90.0 and h > 3.5 and not arched and not house else None,
             "cornice": self.st["cornice"] if ex and ex["material"] in ("sandstone", "brick") and dist < 120.0 else None,
             "tags": self.graffiti.get(idx) if dist < 80.0 else None,
         }
@@ -1309,6 +1337,8 @@ class Renderer3D:
             gf = self._building_ground(idx)[0]
             z0, z1 = self._g(x0, y0) - gf - 0.05, self._g(x1, y1) - gf - 0.05
         self._poly(surf, [(x0, y0, z0), (x1, y1, z1), (x1, y1, h), (x0, y0, h)], self.col(base, sh, fog), ink)
+        if st["house"]:
+            self._draw_house_wall(surf, idx, st["house"], wi, x0, y0, x1, y1, nx, ny, h, z0, z1, sh, fog, ink)
         if st["win"]:
             self._draw_windows(surf, x0, y0, x1, y1, h, self.col(st["win"], sh, fog))
         if st["arched"]:
@@ -1321,6 +1351,78 @@ class Renderer3D:
             w = b[4][wi]
             self._draw_tag(surf, st["tags"][wi], w[0], w[1], w[2], w[3], nx, ny, sh, fog, ink)
 
+    def _draw_house_wall(self, surf, idx, house, wi, x0, y0, x1, y1, nx, ny, h, z0, z1, sh, fog, ink):
+        """Foundation, windows, door, garage door and veranda on one wall of a house (close range only)."""
+        hs = self.st["house"]
+        L = math.hypot(x1 - x0, y1 - y0)
+        if L < 1.5:
+            return
+        ux, uy = (x1 - x0) / L, (y1 - y0) / L
+        kind = house["kind"]
+        fh = 0.35 if kind == "minihome" else 0.75                           # foundation / skirting height
+        if min(z0, z1) < fh:
+            self._poly(surf, [(x0, y0, z0), (x1, y1, z1), (x1, y1, fh), (x0, y0, fh)], self.col(hs["foundation"], sh, fog), ink)
+        whole = self.buildings[idx][4][wi]
+        front = house["front"] == wi
+        # the door's position along this piece of the wall (walls longer than 15 m are drawn in pieces)
+        door_u = None
+        if front:
+            wl = math.hypot(whole[2] - whole[0], whole[3] - whole[1])
+            du = house["door"] * wl - ((x0 - whole[0]) * ux + (y0 - whole[1]) * uy)
+            if 0.6 < du < L - 0.6:
+                door_u = du
+
+        def rect(u0, u1, za, zb, rgb):
+            self._poly(surf, [(x0 + ux * u0, y0 + uy * u0, za), (x0 + ux * u1, y0 + uy * u1, za),
+                              (x0 + ux * u1, y0 + uy * u1, zb), (x0 + ux * u0, y0 + uy * u0, zb)], rgb)
+
+        trim, glass = self.col(hs["trim"], sh, fog), self.col(hs["glass"], sh, fog)
+        if kind == "garage":
+            if front or L >= 5.0:
+                w = min(2.6, L - 0.8)
+                rect((L - w) / 2, (L + w) / 2, 0.05, 2.2, self.col(hs["garage_door"], sh, fog))
+            return
+        if door_u is not None:
+            rect(door_u - 0.6, door_u + 0.6, fh, fh + 2.25, trim)
+            rect(door_u - 0.48, door_u + 0.48, fh, fh + 2.1, self.col(hs["doors"][idx % len(hs["doors"])], sh, fog))
+        n = max(1, int((L - 0.8) / 2.7))
+        ww = 1.2 if kind == "minihome" else 0.95
+        sill = fh + (0.9 if kind == "minihome" else 0.85)
+        for row in range(house["storeys"]):
+            z = sill + row * 2.8
+            if z + 1.3 > h - 0.25:
+                break
+            for k in range(n):
+                uc = L * (k + 0.5) / n
+                if door_u is not None and row == 0 and abs(uc - door_u) < 1.4:
+                    continue
+                rect(uc - ww / 2 - 0.12, uc + ww / 2 + 0.12, z - 0.12, z + 1.42, trim)
+                rect(uc - ww / 2, uc + ww / 2, z, z + 1.3, glass)
+        if front and house["porch"]:
+            self._draw_porch(surf, x0, y0, ux, uy, nx, ny, L, fh, sh, fog, ink)
+
+    def _draw_porch(self, surf, x0, y0, ux, uy, nx, ny, L, fh, sh, fog, ink):
+        """A front veranda: a deck, three posts and a shed roof, 1.8 m deep along most of the front wall."""
+        hs = self.st["house"]
+        a, b, d = L * 0.1, L * 0.9, 1.8
+        deck_z, roof_z = fh, 2.9
+
+        def P(u, out, z):
+            return (x0 + ux * u + nx * out, y0 + uy * u + ny * out, z)
+        wood, roof = self.col(hs["porch"], sh, fog), self.col(hs["porch_roof"], sh, fog)
+        self._poly(surf, [P(a, d, 0.0), P(b, d, 0.0), P(b, d, deck_z), P(a, d, deck_z)], wood, ink)      # deck front
+        if self.cz > deck_z:
+            self._poly(surf, [P(a, 0, deck_z), P(b, 0, deck_z), P(b, d, deck_z), P(a, d, deck_z)], self.col(hs["porch"], 3, fog), ink)
+        for u in (a + 0.15, (a + b) / 2, b - 0.15):
+            self._poly(surf, [P(u - 0.09, d - 0.15, deck_z), P(u + 0.09, d - 0.15, deck_z),
+                              P(u + 0.09, d - 0.15, roof_z), P(u - 0.09, d - 0.15, roof_z)], self.col(hs["trim"], sh, fog), ink)
+        self._poly(surf, [P(a - 0.2, d + 0.2, roof_z), P(b + 0.2, d + 0.2, roof_z),
+                          P(b + 0.2, d + 0.2, roof_z + 0.25), P(a - 0.2, d + 0.2, roof_z + 0.25)], roof, ink)       # roof edge
+        if self.cz > roof_z:
+            self._poly(surf, [P(a - 0.2, 0, roof_z + 0.55), P(b + 0.2, 0, roof_z + 0.55),
+                              P(b + 0.2, d + 0.2, roof_z + 0.25), P(a - 0.2, d + 0.2, roof_z + 0.25)],
+                       self.col(hs["porch_roof"], 3, fog), ink)
+
     def _draw_building_top(self, surf, idx, dist):
         b = self.buildings[idx]
         st = self._building_style(idx, b, dist)
@@ -1329,7 +1431,9 @@ class Renderer3D:
         ink = self.ink(fog)
         roof = ex.get("roof") if ex else None
         if roof:
-            self._draw_roof(surf, roof, ex["roof_colour"], fog, ink)
+            house = st["house"]
+            self._draw_roof(surf, roof, ex["roof_colour"], fog, ink, wall=base,
+                            attic=house is not None and house["kind"] in ("cape", "two_storey"))
             if ex.get("chimney"):
                 self._draw_chimney(surf, ex["chimney"], fog, ink)
         elif self.cz > h:
@@ -1357,8 +1461,9 @@ class Renderer3D:
         if self.cz > z1:
             self._poly(surf, [(p[0], p[1], z1) for p in corners], self.col((70, 60, 58), 3, fog), ink)
 
-    def _draw_roof(self, surf, faces, colour, fog, ink):
-        """Gable / hip / mansard roof faces, far to near, skipping the ones that face away."""
+    def _draw_roof(self, surf, faces, colour, fog, ink, wall=None, attic=False):
+        """Gable / hip / mansard roof faces, far to near, skipping the ones that face away. Upright faces (the gable
+        ends) are wall, so they take the wall colour when it is given, with a small attic window when `attic`."""
         cx, cy, cz = self.cx, self.cy, self.cz
         vis = []
         for face, (nx, ny, nz) in faces:
@@ -1370,7 +1475,27 @@ class Renderer3D:
             vis.append((mx * mx + my * my, face, shade_index(nx, ny, nz)))
         vis.sort(key=lambda v: -v[0])
         for _d, face, sh in vis:
-            self._poly(surf, face, self.col(colour, sh, fog), ink)
+            upright = wall is not None and len(face) == 3 and abs(face[0][2] - face[1][2]) < 1e-6 and face[2][2] > face[0][2] \
+                and abs(face[2][0] - (face[0][0] + face[1][0]) / 2) < 1e-6 and abs(face[2][1] - (face[0][1] + face[1][1]) / 2) < 1e-6
+            self._poly(surf, face, self.col(wall if upright else colour, sh, fog), ink)
+            if upright and attic:
+                self._attic_window(surf, face, sh, fog)
+
+    def _attic_window(self, surf, face, sh, fog):
+        """A small window in a gable end, a third of the way up the triangle."""
+        hs = self.st["house"]
+        (ax, ay, z0), (bx, by, _), (_tx, _ty, top) = face
+        L = math.hypot(bx - ax, by - ay)
+        rh = top - z0
+        if L < 3.0 or rh < 1.6:
+            return
+        ux, uy = (bx - ax) / L, (by - ay) / L
+        mx, my = (ax + bx) / 2, (ay + by) / 2
+        zc = z0 + rh * 0.33
+        for half_w, half_h, rgb in ((0.55, 0.7, hs["trim"]), (0.42, 0.57, hs["glass"])):
+            self._poly(surf, [(mx - ux * half_w, my - uy * half_w, zc - half_h), (mx + ux * half_w, my + uy * half_w, zc - half_h),
+                              (mx + ux * half_w, my + uy * half_w, zc + half_h), (mx - ux * half_w, my - uy * half_w, zc + half_h)],
+                       self.col(rgb, sh, fog))
 
     def _wall_band(self, surf, x0, y0, x1, y1, z0, z1, rgb, ink=None):
         self._poly(surf, [(x0, y0, z0), (x1, y1, z0), (x1, y1, z1), (x0, y0, z1)], rgb, ink)

@@ -132,7 +132,7 @@ amherst-run/
 - [ ] Settings for resolution scale and palette
 
 ## Status (updated 15 Nov 2026)
-- Everything below is built and tested headless (385 tests, `python -m unittest discover -s tests`). Still needs hands-on
+- Everything below is built and tested headless (395 tests, `python -m unittest discover -s tests`). Still needs hands-on
   playtesting: handling, drift/boost feel, 4 player on Batocera, and the map editor with a real mouse.
 - Runs on: Windows/macOS/Linux laptop (development), Batocera (Xbox pads, pygame 2.5.2, Python 3.11), Android/Pydroid.
 - Frame cost (sandbox): ~2-3 ms render, ~17,500 props (about 15,000 trees). A basic laptop may be 2-4x slower.
@@ -198,6 +198,14 @@ amherst-run/
   Small footprints measuring > 10.5 m are skipped (tree canopy). Walls came out ~1.9 m lower than the old estimates.
   Render cost unchanged (roofs replaced the zoning-guessed ones). Tile cache data/.lidar_cache (~250 MB, git-ignored).
   The start house keeps its hand values (LiDAR says walls 4.6 m, ridge 6.7 m vs the hand 4.4 + 3.6).
+- House types (17 Nov 2026, `game/archetypes.py`): classify() -> garage / minihome / bungalow / cape / two_storey /
+  apartment from LiDAR wall height (bungalow <= 4.0 m, two_storey > 6.0 m, cape between or steep), measured pitch
+  (LiDAR under-reads pitch: median 0.35; "steep" >= 0.45), footprint, zone and tags; commercial/landmark/custom -> None.
+  Real map: 1,157 cape, 1,045 two-storey, 722 bungalow, 520 mini-home, 310 garage, 42 apartment, 1,366 other.
+  Porches are a stable coin flip (55% two-storey, 30% cape, 20% bungalow). `"arch"` in map_edits.json overrides
+  (start house = "cape"). Renderer: details only within HOUSE_DETAIL = 45 m, worked out lazily per building
+  (`Renderer3D._house`, front wall = first outward probe that hits world.on_road); colours in STYLES[...]["house"].
+  Upright gable triangles now use the wall colour on all buildings. No measurable render cost (back-to-back, +-2 ms).
 - Benchmarks drift with machine load (17 Nov: street downtown render ~32 ms vs ~17 ms on 15 Nov, same code): compare
   only back-to-back runs.
 - Painter's algorithm: scene objects must be sorted far-to-near (regression test exists). Walls are 12 m pieces;
@@ -211,8 +219,8 @@ amherst-run/
 2. DONE (15 Nov 2026): traffic lights / stop signs / right of way (`game/junctions.py`). Follow-ups: visible signs at
    inferred junctions (ask Jeremy where the real ones are), running a red light adds heat.
 3. DONE (15 Nov 2026): real house numbers from the NS Civic Address File (see Status).
-4. DONE (17 Nov 2026) heights + roof shapes from LiDAR (see Status). Next: house archetypes (porches, dormers,
-   foundations, gambrel roofs, doors/windows by wall length) assigned from footprint + LiDAR + zoning, close-range LOD.
+4. DONE (17 Nov 2026) heights + roof shapes from LiDAR, and house types with close-range details (see Status).
+   Next: dormers, gambrel (barn) roofs, bay windows, shop fronts downtown; hand-model the buildings Jeremy knows.
 5. Vehicle realism: suspension lean and pitch, tyre marks and smoke on drift, engine and tyre sound, per-vehicle handling.
 6. Pedestrians (crossings, footpaths), parked cars along streets, road markings and signs from Mapillary (check licence first).
 7. DONE (15 Nov 2026): weather and time of day. Follow-ups: night, rain, fog starting closer (FOG_START is global).

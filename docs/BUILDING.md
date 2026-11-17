@@ -88,6 +88,7 @@ building with `"roof_colour"`.
 | `material` | `sandstone`, `brick`, `clapboard` or `granite` |
 | `colour` | `[r, g, b]` wall colour, instead of a material |
 | `chimney` | Brick chimney on the ridge of a gable or hip roof: `true`, or where along the ridge from `-0.9` to `0.9` (0 = middle) |
+| `arch` (map_edits.json, for OpenStreetMap buildings) | House type for the close-up details: `garage`, `minihome`, `bungalow`, `cape`, `two_storey` or `apartment`, plus `+porch` for a front veranda (e.g. `"two_storey+porch"`). Without it the type is worked out from height, roof and zoning |
 | `label` | Name shown on the whole-town map (keep it generic, like the other landmarks) |
 | `replace_radius` | Metres. Removes the OpenStreetMap building(s) whose centre is that close (swap a real house for yours) |
 

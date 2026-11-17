@@ -22,7 +22,7 @@ EDITS_NAME = "map_edits.json"
 TOLERANCE = 3.0                     # metres: how far the map may have moved since the edit was made
 ROAD_FIELDS = ("type", "width", "name", "speed", "rc", "lanes", "oneway", "surface", "service", "ref")
 BUILDING_FIELDS = ("height", "material", "colour", "roof", "roof_height", "roof_colour", "landmark", "label", "role",
-                   "chimney", "ridge_across")
+                   "chimney", "ridge_across", "arch")
 MIN_OVERLAP = 0.35                  # metres of intrusion before something counts as overlapping (walls touch in rows)
 
 
