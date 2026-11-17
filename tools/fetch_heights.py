@@ -271,12 +271,22 @@ def main(argv=None, open_grid=None, log=print):
     ap.add_argument("--out", default=None, help="output (default: building_heights.json next to the map)")
     ap.add_argument("--cache", default=None, help="tile cache folder (default: .lidar_cache next to the map)")
     ap.add_argument("--workers", type=int, default=8, help="parallel downloads")
+    ap.add_argument("--only-new", action="store_true",
+                    help="keep the existing file's rows and measure only buildings it does not have (after extend_map.py)")
     args = ap.parse_args(argv)
     base = os.path.dirname(os.path.abspath(args.map))
     with open(args.map, encoding="utf-8") as f:
         data = json.load(f)
     lat0, lon0 = data["meta"]["origin_lat"], data["meta"]["origin_lon"]
     polys = [b["points"] for b in data["buildings"]]
+    path = args.out or os.path.join(base, "building_heights.json")
+    kept = []
+    if args.only_new and os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            kept = json.load(f)["buildings"]
+        have = {(round(r[0]), round(r[1])) for r in kept}
+        polys = [p for p in polys if (round(centre(p)[0]), round(centre(p)[1])) not in have]
+        log("%d buildings already measured, %d new" % (len(kept), len(polys)))
     cache = args.cache or os.path.join(base, ".lidar_cache")
     if open_grid is None:
         def open_grid(kind):
@@ -302,7 +312,8 @@ def main(argv=None, open_grid=None, log=print):
             kinds[m["roof"]] = kinds.get(m["roof"], 0) + 1
         if (i + 1) % 1000 == 0:
             log("  measured %d / %d (%.0f s)" % (i + 1, len(polys), time.time() - t0))
-    path = args.out or os.path.join(base, "building_heights.json")
+    new = len(out)
+    out = kept + out
     doc = {"source": SOURCE, "licence": LICENCE, "fields": ["x", "y", "h", "roof", "rh", "across (optional)"],
            "alignment": {"cell": CELL, "median_shift": list(default)}, "buildings": out}
     with open(path, "w", encoding="utf-8") as f:
@@ -310,7 +321,7 @@ def main(argv=None, open_grid=None, log=print):
         f.write("\n")
     tops = sorted(b[2] + b[4] for b in out)
     log("wrote %s: %d of %d buildings measured (%s); top heights median %.1f m, 90%% under %.1f m, tallest %.1f m"
-        % (path, len(out), len(polys), ", ".join("%d %s" % (v, k) for k, v in sorted(kinds.items())),
+        % (path, new, len(polys), ", ".join("%d %s" % (v, k) for k, v in sorted(kinds.items())),
            tops[len(tops) // 2], tops[int(len(tops) * 0.9)], tops[-1]))
     return 0
 

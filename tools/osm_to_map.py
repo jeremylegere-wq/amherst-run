@@ -192,13 +192,16 @@ POI_AMENITIES = ("bank", "post_office", "place_of_worship", "courthouse", "townh
 POI_TOURISM = ("museum", "information")
 
 
-def convert(source, landmarks=None, nsrn_csv=None):
-    """Convert OSM XML to game map data. landmarks: a spec dict (see tools/landmarks.py) or None."""
+def convert(source, landmarks=None, nsrn_csv=None, origin=None):
+    """Convert OSM XML to game map data. landmarks: a spec dict (see tools/landmarks.py) or None.
+    origin: (lat, lon) of game (0, 0); default the middle of the download (tools/extend_map.py passes the main map's)."""
     nodes, ways, bounds, node_tags = parse_osm(source)
     if not nodes:
         raise ValueError("No nodes found in OSM file")
 
-    if bounds:
+    if origin:
+        lat0, lon0 = origin
+    elif bounds:
         lat0 = (bounds[0] + bounds[2]) / 2
         lon0 = (bounds[1] + bounds[3]) / 2
     else:

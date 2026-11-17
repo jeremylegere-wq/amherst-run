@@ -21,8 +21,10 @@ class Lookup(unittest.TestCase):
         z = Z.Zoning(DOC)
         self.assertEqual(z.zone_at(5, 5), "R")
         self.assertEqual(z.zone_at(25, 5), "M")
-        self.assertEqual(z.zone_at(-50, 5), "-")
-        self.assertEqual(z.zone_at(500, 500), "-")
+        self.assertEqual(z.zone_at(-50, 5), Z.RURAL)                 # past the zoning map: rural homes
+        self.assertEqual(z.zone_at(500, 500), Z.RURAL)
+        self.assertFalse(z.covers(-50, 5))
+        self.assertTrue(z.covers(5, 5))
 
     def test_unzoned_cell_surrounded_by_one_zone_takes_it(self):
         z = Z.Zoning({"cell": 10.0, "x0": 0.0, "y0": 0.0, "zones": {}, "rows": ["RRR", "R-R", "RRR"]})

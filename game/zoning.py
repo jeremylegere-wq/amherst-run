@@ -24,6 +24,7 @@ BIZ = [(196, 198, 202), (206, 196, 176), (170, 180, 192)]
 MALL = (174, 166, 152)
 
 BIG_BOX_AREA = 250.0        # m2: above this a commercial building is a box store, below it a shop
+RURAL = "R"                 # zone used outside the zoning map (the rural loop around town is mostly homes)
 MIN_AREA = 22.0             # sheds and booths are left as they are
 
 
@@ -63,6 +64,11 @@ class Zoning:
         with open(path) as f:
             return cls(json.load(f))
 
+    def covers(self, x, y):
+        """True inside the zoning map's grid."""
+        r = (y - self.y0) / self.cell
+        return 0 <= r < len(self.rows) and 0 <= (x - self.x0) / self.cell < len(self.rows[int(r)])
+
     def _at(self, x, y):
         c = int(math.floor((x - self.x0) / self.cell))
         r = int(math.floor((y - self.y0) / self.cell))
@@ -75,6 +81,8 @@ class Zoning:
         z = self._at(x, y)
         if z != "-":
             return z
+        if not self.covers(x, y):
+            return RURAL                                   # past the town's zoning map: the rural roads are homes
         seen = {}
         for dx in (-1, 0, 1):
             for dy in (-1, 0, 1):

@@ -1,0 +1,14 @@
+{
+ "_about": "Extra areas added to the map by tools/extend_map.py (re-added by --reapply).",
+ "areas": [
+  {
+   "name": "east_loop",
+   "bbox": [
+    45.78913,
+    -64.18574,
+    45.85478,
+    -64.11217
+   ]
+  }
+ ]
+}
