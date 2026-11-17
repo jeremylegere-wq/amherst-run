@@ -9,6 +9,10 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-17
+Amherst, measured and rebuilt: real building heights and roofs from LiDAR, house types with close-up detail, and the
+town's heritage buildings modelled from the Canadian Register of Historic Places and reference photos.
+
 ### Added
 - Real building heights and roof shapes from LiDAR (NRCan HRDEM, 2020 Nova Scotia survey): `tools/fetch_heights.py`
   measures every building (4,956 of 5,160) and fits flat, gable (either direction) or hip roofs; the game applies
@@ -33,6 +37,14 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
   roof pitch, footprint and zoning. Within 45 m houses get foundations, trimmed windows per storey, a front door on the
   street side, wall-coloured gable ends with attic windows and front verandas. `"arch"` in map_edits.json sets a type by
   hand. Gable ends are now drawn in the wall colour on every building, and family homes no longer get graffiti.
+- README: a new picture gallery and a "How Amherst was built" section (data layers, the LiDAR method, heritage
+  sources, what wins over what). `tools/readme_shots.py` regenerates every README picture.
+
+### Changed
+- The clock tower is on the old post office (50 Victoria St E), not the Court House: the heritage register lists no
+  tower on the 1888 Court House.
+- Measured walls are typically 1.9 m lower than the old height guesses, so streets look lower and roofs more varied.
+- A house's front door is found up to 50 m from a street (some heritage houses sit well back).
 
 ## [0.1.0] - 2026-11-15
 First public release.
@@ -141,5 +153,6 @@ First public release.
 - The sandstone-corner bank entry in the landmark file matched every bank; it now matches by name only.
 - Buildings no longer draw through one another or through cars: each wall piece is depth-sorted on its own.
 
-[Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jeremylegere-wq/amherst-run/releases/tag/v0.1.0

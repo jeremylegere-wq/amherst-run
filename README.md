@@ -24,18 +24,66 @@ with on-screen touch controls.
 - **House numbers** from the Nova Scotia Civic Address File: parcel jobs send you to real addresses.
 - **Woods and zoning** from provincial open data, so each district looks like itself.
 - **Traffic lights and stop signs** from OpenStreetMap, which the town's traffic obeys, with right of way everywhere else.
+- **Heritage buildings** modelled from the Canadian Register of Historic Places and reference photos: the old post
+  office's clock tower, the Court House, the Dominion Building, the churches' towers, Victorian and Greek Revival houses,
+  and two demolished landmarks (the 1906 Bank of Montreal and the Hickman Street school) put back where they stood.
 
 | | |
 |---|---|
-| ![A church on Victoria Street](docs/images/church.png) | ![The start: a driveway on a quiet residential street](docs/images/start.png) |
-| Downtown churches and sandstone blocks, with traffic on the right | You start in a driveway on a quiet residential street |
-| ![Police closing in](docs/images/chase.png) | ![Four player split screen](docs/images/splitscreen.png) |
+| ![The old post office clock tower and the Court House](docs/images/heritage.png) | ![First Baptist's twin towers](docs/images/churches.png) |
+| The 1884 post office's clock tower beside the 1888 Court House; shop fronts along Victoria Street | First Baptist's twin towers in red sandstone; Trinity-St. Stephen's bell tower behind |
+| ![The old Bank of Montreal](docs/images/bank.png) | ![The Hickman Street school](docs/images/school.png) |
+| The demolished 1906 Bank of Montreal, back on its corner beside the grey Dominion Building | The demolished c.1911 Hickman Street school: brick on a white base, arched centre |
+| ![A Queen Anne house with a stone turret](docs/images/victorian.png) | ![A Classical Revival house with its wing and garage](docs/images/greek_revival.png) |
+| A 1907 Queen Anne house: stone turret and round bay, wrap-around veranda, dormer | An 1840s Classical Revival house with its storey-and-a-half wing and garage wing |
+| ![The start](docs/images/start.png) | ![A residential street](docs/images/houses.png) |
+| You start in a driveway on a quiet residential street | Houses up close: doors, trimmed windows, foundations, verandas |
+| ![Police on Victoria Street](docs/images/chase.png) | ![Four player split screen](docs/images/splitscreen.png) |
 | Police chases with a wanted level | 2, 3 or 4 player split screen |
 | ![Top-down view](docs/images/top.png) | ![Weather presets](docs/images/weather.png) |
 | Top-down view (V) | Clear, overcast, coastal fog / golden hour, snow, and the flat-shaded retro style |
 
+## How Amherst was built
+The town is assembled in layers, each from the best source available, and each layer can be refreshed with its own tool:
+
+| Layer | Source | How it gets into the game |
+|---|---|---|
+| Streets | Nova Scotia Road Network (open data) | `tools/fetch_osm.py` + `tools/nsrn.py`: names, one-ways, overpasses, speed limits |
+| Building outlines, parks, landmarks | OpenStreetMap | `tools/osm_to_map.py`; landmarks matched by name and place (`data/landmarks_amherst.json`) |
+| Hills | Terrain Tiles on AWS (NRCan CDEM, SRTM) | `tools/fetch_elevation.py`: a 25 m height grid |
+| Building heights and roof shapes | NRCan HRDEM LiDAR, 2020 Nova Scotia survey | `tools/fetch_heights.py` (below) |
+| House types and their details | measured height, roof pitch, footprint, zoning | `game/archetypes.py` sorts every home into Amherst's common types; the renderer adds doors, windows, verandas |
+| House numbers | Nova Scotia Civic Address File | `tools/fetch_addresses.py`; also used to find heritage buildings by street address |
+| Woods, zoning | Nova Scotia Topographic Database, the town's zoning map | `tools/fetch_landcover.py`, `tools/zoning_from_pdf.py` |
+| Heritage buildings | Canadian Register of Historic Places (facts only) + reference photos | hand-written settings in `data/map_edits.json` and `data/custom_buildings.json` |
+
+![LiDAR rooftop heights downtown with the map's building outlines](docs/images/lidar.png)
+
+**Measuring every building.** NRCan publishes Nova Scotia's 2020 LiDAR survey as two province-wide 1 m grids, the
+ground and the surface including rooftops, each a 57 GB cloud-optimised GeoTIFF. `tools/cog.py` reads just the 124
+tiles under Amherst over HTTP range requests (about 250 MB), with a small pure-Python LZW decoder and the Canada
+Atlas Lambert projection, so no GIS library is needed. `tools/fetch_heights.py` then lines the OpenStreetMap outlines
+up with the roofs (they sit about 3 m apart, measured per 500 m neighbourhood), and for each building takes the
+surface-minus-ground heights inside its outline and fits a flat, gabled or hipped roof, trying both ridge directions.
+Trees over small houses are caught and skipped. 4,956 of the 5,160 buildings get a measured height and roof.
+
+**Heritage buildings.** Each registered place was matched to its building through its street address, then modelled
+from the register's facts (storeys, stone, roof, towers, windows) without copying its text. Buildings missing from
+OpenStreetMap, and the two that have been demolished, are placed as custom buildings; LiDAR height maps were used to
+check each placement, which is how the two demolished sites showed up as bare ground. Reference photos were used for
+the look only; positions always come from the data.
+
+**What wins.** Hand edits beat LiDAR, LiDAR beats the zoning-based guesses, and those beat the converter's defaults, so
+fixing one building never means fighting the pipeline. No Google Maps data is used anywhere.
+
+**Built with an AI pair programmer.** The game was developed with [Claude Code](https://claude.com/claude-code), working
+step by step with Jeremy: researching the open datasets, writing the tools and renderer features, checking every
+change against the test suite (400+ headless tests) and a frame-time benchmark, and committing each working step.
+Jeremy chose the direction, knows the town, picked the reference photos and decided anything that needed local
+knowledge, like where the demolished buildings stood and where the game starts.
+
 ## Contents
-[Get the game](#get-the-game) | [Play](#play) | [Controls](#controls) | [The game](#the-game) | [Maps and landmarks](#maps-and-landmarks) |
+[How Amherst was built](#how-amherst-was-built) | [Get the game](#get-the-game) | [Play](#play) | [Controls](#controls) | [The game](#the-game) | [Maps and landmarks](#maps-and-landmarks) |
 [Development](#development) | [Making a release](#making-a-release) | [Credits and licence](#credits-and-licence)
 
 ## Get the game
@@ -195,6 +243,7 @@ Homes are sorted into Amherst's common types from their measured height, roof pi
 (`game/archetypes.py`): garage, mini-home, bungalow, storey-and-a-half cape, two-storey (about half with a front veranda)
 and apartment block. Up close (45 m) each type gets a foundation, trimmed windows by storey, a front door on the
 street side, siding up into the gables with an attic window, and verandas; further away they keep the cheap look.
+Hand-modelled houses can also have dormers, round towers and bays with cone roofs, wrap-around verandas and chimneys.
 Set a house's type by hand with `"arch"` in `data/map_edits.json` (see [docs/BUILDING.md](docs/BUILDING.md)).
 
 ### Heritage buildings
@@ -202,7 +251,11 @@ Downtown's registered heritage buildings are modelled from the facts in the Cana
 (storeys, stone, roof, towers): the 1888 Court House, the old post office with its clock tower, the Dominion Building
 in light grey sandstone, the 1907 Bank of Nova Scotia, an 1897 sandstone shop, the railway station, the Armoury, and
 the churches (Trinity-St. Stephen's castellated bell tower, First Baptist's twin towers, Christ Church with no steeple).
-Downtown blocks get shop fronts with display windows, sign bands and upper-storey windows when you are close.
+Houses on the register are modelled from reference photos too: the 1907 Queen Anne house at 177 Victoria Street East
+(stone turret, round bay, wrap-around veranda), the 1840s Classical Revival house at 233 Victoria Street East with its
+wing and garage, and the Second Empire Moffatt House on Church Street (mansard roof, dormers, bay window).
+The demolished Bank of Montreal (1906) and Hickman Street school (c.1911) are back, placed approximately where the
+register puts them. Downtown blocks get shop fronts with display windows, sign bands and upper-storey windows up close.
 
 ### Real house numbers
 `data/addresses.json` (included) has the Nova Scotia Civic Address File points for the map area. Parcel jobs use the real
@@ -258,7 +311,8 @@ python -m game.main --frames 120 --autodrive                              # head
 python -m game.main --map data/sample_map.json --style retro --frames 120 --autodrive
 pip install ruff==0.16.9 && ruff check --select E9,F63,F7,F82 .          # syntax errors / undefined names
 ```
-Handy extras: `python -m game.main --frames 240 --autodrive --screenshot screenshots/drive.png` saves a frame;
+Handy extras: `python tools/readme_shots.py` regenerates every picture in this README (docs/images);
+`python -m game.main --frames 240 --autodrive --screenshot screenshots/drive.png` saves a frame;
 `python tools/autopilot.py` has a robot play the jobs to check the timers are fair; `python tools/bench_render.py` and
 `python tools/bench_town.py [data/amherst_map.json]` benchmark the renderer (budget: 33 ms per frame for everything).
 
@@ -273,16 +327,17 @@ controls, save data or map format bumps the minor version until 1.0). The single
 `game/__init__.py`. Git tags are `v` plus that version, for example `v0.2.0`, or `v0.2.0-rc.1` for a pre-release.
 
 1. Make sure `main` is green in CI and your working copy is up to date: `git checkout main && git pull`.
-2. In `CHANGELOG.md`, move the "Unreleased" items into a new `## [X.Y.Z] - YYYY-MM-DD` section and update the link references.
-3. Set `__version__ = "X.Y.Z"` in `game/__init__.py`.
-4. Check everything agrees (prints the release notes, fails if the version, tag or changelog disagree):
+2. If the look changed, refresh the README pictures: `python tools/readme_shots.py`.
+3. In `CHANGELOG.md`, move the "Unreleased" items into a new `## [X.Y.Z] - YYYY-MM-DD` section and update the link references.
+4. Set `__version__ = "X.Y.Z"` in `game/__init__.py`.
+5. Check everything agrees (prints the release notes, fails if the version, tag or changelog disagree):
    `python tools/release_notes.py X.Y.Z`
-5. Commit and push to `main`: `git commit -am "Release vX.Y.Z" && git push`. Wait for CI to pass.
-6. Tag and push the tag: `git tag -a vX.Y.Z -m "Amherst Run X.Y.Z" && git push origin vX.Y.Z`.
-7. Watch the **Release** run under the repository's Actions tab. It re-runs CI, refuses to continue if the tag is not on `main`
+6. Commit and push to `main`: `git commit -am "Release vX.Y.Z" && git push`. Wait for CI to pass.
+7. Tag and push the tag: `git tag -a vX.Y.Z -m "Amherst Run X.Y.Z" && git push origin vX.Y.Z`.
+8. Watch the **Release** run under the repository's Actions tab. It re-runs CI, refuses to continue if the tag is not on `main`
    or does not match the version and changelog, builds `amherst-run-vX.Y.Z.zip` plus `SHA256SUMS.txt` from the tagged commit,
    and creates a **draft** GitHub Release with the changelog section as its notes.
-8. Open the draft under Releases, check the notes and the two attached files (download the zip, unpack it, run
+9. Open the draft under Releases, check the notes and the two attached files (download the zip, unpack it, run
    `python -m game.main --frames 60 --autodrive`), then press **Publish release**.
 
 If a release run fails before the draft exists, fix the problem, then delete the tag (`git push --delete origin vX.Y.Z` and
@@ -300,6 +355,8 @@ Building heights (`data/building_heights.json`, `tools/fetch_heights.py`): Natur
 Digital Elevation Model (HRDEM), LiDAR project NS-NSDNR_2020. Contains information licensed under the Open Government
 Licence - Canada.
 Land cover and zoning: Province of Nova Scotia; contains information licensed under the Open Government Licence - Nova Scotia.
+Heritage facts: Canadian Register of Historic Places (historicplaces.ca), via the Wikipedia list of historic places in
+Cumberland County; only facts (storeys, materials, roof, towers) are used, no text.
 All code, art and names in this project are original.
 
 **Licence.** The code is released under the [MIT License](LICENSE). The data files in `data/` keep their own licences

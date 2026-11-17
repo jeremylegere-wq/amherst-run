@@ -227,6 +227,9 @@ amherst-run/
   gap between the Dominion Building and LaPlanche St (bare ground in 2020 LiDAR - consistent with demolition), and the
   Hickman St school (30 Hickman St) on its lot 10 m back from Hickman St at the register point. Both custom buildings,
   notes say "Demolished: placed approximately". Landmarks (any `landmark`) never get graffiti.
+- Releases: v0.1.0 (15 Nov 2026), v0.2.0 (17 Nov 2026: LiDAR heights, house types, heritage buildings). Before a release
+  whose look changed, run `python tools/readme_shots.py` (regenerates docs/images; the LiDAR picture needs
+  data/.lidar_cache). The README "How Amherst was built" section explains the data layers and credits Claude Code.
 - Benchmarks drift with machine load (17 Nov: street downtown render ~32 ms vs ~17 ms on 15 Nov, same code): compare
   only back-to-back runs.
 - Painter's algorithm: scene objects must be sorted far-to-near (regression test exists). Walls are 12 m pieces;
