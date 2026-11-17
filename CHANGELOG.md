@@ -9,6 +9,9 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-17
+Fixes for hills, roads and street signs.
+
 ### Fixed
 - With real elevation on, buildings, roads and props behind a hill no longer show through it, and walls sunk into a
   slope no longer show below the grass: a per-column hill horizon is worked out each frame and anything beyond a crest
@@ -165,6 +168,7 @@ First public release.
 - The sandstone-corner bank entry in the landmark file matched every bank; it now matches by name only.
 - Buildings no longer draw through one another or through cars: each wall piece is depth-sorted on its own.
 
-[Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jeremylegere-wq/amherst-run/releases/tag/v0.1.0
