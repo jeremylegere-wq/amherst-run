@@ -132,7 +132,7 @@ amherst-run/
 - [ ] Settings for resolution scale and palette
 
 ## Status (updated 15 Nov 2026)
-- Everything below is built and tested headless (400 tests, `python -m unittest discover -s tests`). Still needs hands-on
+- Everything below is built and tested headless (404 tests, `python -m unittest discover -s tests`). Still needs hands-on
   playtesting: handling, drift/boost feel, 4 player on Batocera, and the map editor with a real mouse.
 - Runs on: Windows/macOS/Linux laptop (development), Batocera (Xbox pads, pygame 2.5.2, Python 3.11), Android/Pydroid.
 - Frame cost (sandbox): ~2-3 ms render, ~17,500 props (about 15,000 trees). A basic laptop may be 2-4x slower.
@@ -217,6 +217,17 @@ amherst-run/
   St E turret house and 27 / 46 Victoria St W houses (matched but not modelled: need turret/bay/veranda parts).
   Renderer: `steeple` spire/turret/twin/none, `tower` on any building, shop fronts (SHOP_DETAIL 70 m) on street walls of
   downtown sandstone/brick blocks (zone D/U/N or no zone) - `_shop_walls`. No measurable render cost (+-2 ms pairs).
+- Photo-modelled buildings (17 Nov 2026, from Jeremy's reference photos; say "reference photos" in public files):
+  233 Victoria St E = OSM 2352 as the main block (map edit: light blue, gable to the street via ridge_across, chimney,
+  arch two_storey) + custom "wing" (cape, dormer, chimney) and "garage wing" on its right seen from the street;
+  Moffatt House 96 Church St = custom (not in OSM; mansard, 3 dormers, bay, two_storey+porch); 177 Victoria St E =
+  OSM 927 with its 8-corner outline replaced by its bounding rectangle (map edit "points") for a hip roof + dormer,
+  arch two_storey+wrap, + custom 8-sided stone "turret" (cone) at the NW corner and "round bay" on the west side.
+  PENDING (models in custom_buildings history, not placed): Old Bank of Montreal (100 Victoria St E) - LiDAR shows bare
+  ground where it was first put (between the Dominion Building and LaPlanche St); OSM 116 (NW corner, civic 102) is the
+  only roofed candidate. Hickman St school (30 Hickman St) - not in OSM, and no 44 m building in the 2020 LiDAR near the
+  register point. Ask Jeremy where both stand. Check placements against LiDAR with a height map (scratch tool hmap.py
+  idea: DSM-DTM around the point, OSM outlines shifted 3 m south) before trusting register coordinates.
 - Benchmarks drift with machine load (17 Nov: street downtown render ~32 ms vs ~17 ms on 15 Nov, same code): compare
   only back-to-back runs.
 - Painter's algorithm: scene objects must be sorted far-to-near (regression test exists). Walls are 12 m pieces;

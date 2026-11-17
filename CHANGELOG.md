@@ -20,6 +20,11 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
   Nova Scotia (79), 1897 sandstone shop (91), railway station (hip roof), Armoury (finally found: building tagged
   military by Acadia St), Trinity-St. Stephen's (castellated bell tower), First Baptist (twin towers, red sandstone),
   Christ Church (no steeple). New building settings `tower`, `steeple`, `storeys`, `shopfront`.
+- Buildings modelled from reference photos: 233 Victoria St E (two-storey Classical Revival main house = OSM building,
+  plus a storey-and-a-half wing with a dormer and a garage wing), Moffatt House (96 Church St: mansard roof, three
+  dormers, two-storey bay, porch), 177 Victoria St E (white Queen Anne with a stone turret and round bay under cone
+  roofs, a wrap-around veranda, hipped roof with a dormer).
+- New building parts: polygon footprints (`sides`), `cone` roofs, `dormers`, `plinth` base courses, `+wrap` verandas.
 - Shop fronts on downtown blocks within 70 m: display windows between piers, a door, a sign band and upper-storey windows.
 - House types (`game/archetypes.py`): garage, mini-home, bungalow, cape, two-storey, apartment, picked from LiDAR height,
   roof pitch, footprint and zoning. Within 45 m houses get foundations, trimmed windows per storey, a front door on the

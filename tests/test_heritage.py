@@ -114,3 +114,70 @@ class HeritageTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NewPartsTests(unittest.TestCase):
+    """Towers, cone roofs, dormers, wrap-around verandas and plinths (used for the photographed buildings)."""
+
+    def test_polygon_footprint_and_cone_roof(self):
+        from game import builder as B
+        b, warn = B.make_building({"x": 0, "y": 0, "facing": 0, "width": 4.0, "sides": 8, "height": 9.0, "roof": "cone",
+                                   "roof_height": 4.0}, {"bounds": [-9, -9, 9, 9]}, [])
+        self.assertEqual(len(b["points"]), 8)
+        self.assertTrue(all(abs(math.hypot(*p) - 2.0) < 0.02 for p in b["points"]))
+        faces = B.roof_faces([tuple(p) for p in b["points"]], 9.0, "cone", 4.0)
+        self.assertEqual(len(faces), 8)
+        self.assertTrue(all(f[2][2] == 13.0 for f in faces))
+        self.assertEqual(warn, [])
+
+    def test_pass_through_fields(self):
+        from game import builder as B
+        b, _ = B.make_building({"x": 0, "y": 0, "facing": 0, "dormers": 2, "plinth": [250, 250, 250], "arch": "cape",
+                                "storeys": 3, "tower": True, "steeple": "twin"}, {"bounds": [-9, -9, 9, 9]}, [])
+        self.assertEqual((b["dormers"], b["plinth"], b["arch"], b["storeys"], b["tower"], b["steeple"]),
+                         (2, [250, 250, 250], "cape", 3, True, "twin"))
+        data = {"meta": {}, "roads": [], "buildings": [block(0, 0, 10, 10)]}
+        mapedits.apply(data, {"buildings": {"replace": [{"at": [5, 5], "dormers": 3, "plinth": [1, 2, 3]}]}})
+        self.assertEqual((data["buildings"][0]["dormers"], data["buildings"][0]["plinth"]), (3, [1, 2, 3]))
+
+    def test_wrap_veranda_type(self):
+        from game import archetypes as A
+        info = A.classify({"points": [[0, 0], [10, 0], [10, 8], [0, 8]], "arch": "two_storey+wrap"})
+        self.assertTrue(info["porch"] and info["wrap"])
+        self.assertFalse(A.classify({"points": [[0, 0], [10, 0], [10, 8], [0, 8]], "arch": "two_storey+porch"})["wrap"])
+
+    def test_dormers_wrap_porch_and_plinth_draw(self):
+        pygame.init()
+        data = make_sample_map.build()
+        data["roads"] = [{"type": "side", "width": 8, "name": "Elm St", "points": [[-200, 0], [200, 0]]}]
+        data["buildings"] = [
+            {"points": [[-6, 10], [6, 10], [6, 19], [-6, 19]], "tags": {"building": "house"}, "height": 5.0, "roof": "gable",
+             "roof_height": 4.0, "colour": [200, 200, 220], "material": "clapboard", "dormers": 2, "arch": "two_storey+wrap"},
+            {"points": [[30, 10], [60, 10], [60, 25], [30, 25]], "tags": {"building": "yes"}, "height": 9.0,
+             "material": "brick", "landmark": "civic", "plinth": [240, 240, 236]},
+        ]
+        world = World(data)
+        r = R.Renderer3D(world, style="street")
+        house = r._house(0)
+        self.assertIsNotNone(house["wrap_wall"])
+        self.assertNotEqual(house["wrap_wall"], house["front"])
+        fr = r._dormer_frame(0, r.buildings[0], r.extras[0])
+        self.assertGreater(fr[5], 0.5)                                          # dormers on the street side (south = +y)
+        drawn = []
+        orig = r._poly
+        r._poly = lambda surf, pts, rgb, ink=None: (drawn.append(rgb), orig(surf, pts, rgb, ink))
+        car = Car(-2.0, -8.0, math.pi / 2 - 0.3)
+        cam = R.ChaseCamera(car, world)
+        for _ in range(40):
+            cam.update(car, 1 / 30)
+        r.render(pygame.Surface((C.INTERNAL_W, C.INTERNAL_H)), car, cam)
+        glass = {r.col(r.st["house"]["glass"], s, f) for s in range(4) for f in range(3)}
+        self.assertTrue(set(drawn) & glass)
+        plinth = {r.col((240, 240, 236), s, f) for s in range(4) for f in range(4)}
+        car2 = Car(45.0, -15.0, math.pi / 2)
+        cam2 = R.ChaseCamera(car2, world)
+        for _ in range(40):
+            cam2.update(car2, 1 / 30)
+        drawn.clear()
+        r.render(pygame.Surface((C.INTERNAL_W, C.INTERNAL_H)), car2, cam2)
+        self.assertTrue(set(drawn) & plinth, "no plinth band on the civic building")

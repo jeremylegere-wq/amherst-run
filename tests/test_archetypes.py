@@ -58,7 +58,7 @@ class ClassifyTests(unittest.TestCase):
         self.assertIsNone(A.classify(house(material="sandstone")))
 
     def test_hand_set_type_wins(self):
-        self.assertEqual(A.classify(house(h=8.0, arch="cape")), {"kind": "cape", "storeys": 1, "porch": False})
+        self.assertEqual(A.classify(house(h=8.0, arch="cape")), {"kind": "cape", "storeys": 1, "porch": False, "wrap": False})
         self.assertTrue(A.classify(house(arch="bungalow+porch"))["porch"])
         self.assertIsNone(A.classify(house(arch="castle")))
 

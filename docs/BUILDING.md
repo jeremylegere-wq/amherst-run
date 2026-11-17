@@ -83,12 +83,15 @@ building with `"roof_colour"`.
 | `facing` | Compass direction the front looks, 0 = north, 90 = east. Leave it out and the front faces the nearest street |
 | `setback` | Metres between the kerb and the front. Slides the building along the line to the street |
 | `width`, `depth`, `height` | Metres. Override the preset (2 to 80 wide/deep, 0.5 to 60 tall: low ones make decks, hedges, fences) |
-| `roof` | `flat`, `gable`, `hip` or `mansard`. `roof_height` is how tall the roof is in metres |
+| `roof` | `flat`, `gable`, `hip`, `mansard` or `cone` (a point over the middle: towers and round bays). `roof_height` is how tall the roof is in metres |
+| `sides` | 5 or more makes a polygon (a round tower or bay drawn with flat faces) `width` across, instead of a rectangle |
+| `dormers` | Number of dormers along the street-facing slope of a gable, hip or mansard roof |
+| `plinth` | `[r, g, b]` base course along the bottom 1.6 m of the walls (a painted or stone foundation) |
 | `roof_colour` | `slate`, `shingle`, `copper`, `tin` or `[r, g, b]` |
 | `material` | `sandstone`, `brick`, `clapboard` or `granite` |
 | `colour` | `[r, g, b]` wall colour, instead of a material |
 | `chimney` | Brick chimney on the ridge of a gable or hip roof: `true`, or where along the ridge from `-0.9` to `0.9` (0 = middle) |
-| `arch` (map_edits.json, for OpenStreetMap buildings) | House type for the close-up details: `garage`, `minihome`, `bungalow`, `cape`, `two_storey` or `apartment`, plus `+porch` for a front veranda (e.g. `"two_storey+porch"`). Without it the type is worked out from height, roof and zoning |
+| `arch` (map_edits.json, for OpenStreetMap buildings) | House type for the close-up details: `garage`, `minihome`, `bungalow`, `cape`, `two_storey` or `apartment`, plus `+porch` for a front veranda or `+wrap` for one that turns the corner (e.g. `"two_storey+wrap"`). Without it the type is worked out from height, roof and zoning |
 | `tower` (map_edits.json) | `true` puts a clock tower with a cupola on the building (the old post office has it) |
 | `steeple` (map_edits.json, churches) | `spire` (default), `turret` (square castellated bell tower), `twin` (two towers with pointed caps) or `none` |
 | `storeys`, `shopfront` (map_edits.json) | Rows of windows for a downtown block, and `true` / `false` to force a shop front on its street side |

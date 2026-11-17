@@ -487,6 +487,7 @@ class Renderer3D:
         self._bground.pop(i, None)
         self.extras.pop(i, None)
         self._houses.pop(i, None)
+        self._houses.pop(("dormer", i), None)
         self._shops.pop(i, None)
         self.graffiti.pop(i, None)
         self._prep_building(i, self.world.buildings[i])
@@ -524,6 +525,7 @@ class Renderer3D:
             ex = {"material": b.get("material"), "landmark": b.get("landmark"),
                   "tower": b.get("tower", False), "steeple": b.get("steeple", "spire"),
                   "storeys": b.get("storeys"), "shopfront": b.get("shopfront"), "zone": b.get("zone"),
+                  "plinth": b.get("plinth"), "dormers": int(b.get("dormers") or 0),
                   "axis": math.atan2(longest[3] - longest[1], longest[2] - longest[0]),
                   "roof": None}
             faces = roof_faces(pts, height, roof, b.get("roof_height", 0.0), b.get("ridge_across", False)) if roof else []
@@ -1313,6 +1315,13 @@ class Renderer3D:
                 walls = self.buildings[idx][4]
                 info = dict(info, front=archetypes.front_wall(walls, self.world.on_road))
                 info["door"] = 0.3 + 0.4 * archetypes._coin(idx, 3)        # where along the front wall the door sits
+                info["wrap_wall"] = None
+                if info.get("wrap") and info["front"] is not None:          # the veranda turns the corner: pick the side
+                    n = len(walls)                                            # wall that sees a street sooner, else the longer
+                    nbrs = [(info["front"] - 1) % n, (info["front"] + 1) % n]
+                    near = archetypes.front_wall([walls[k] for k in nbrs], self.world.on_road)
+                    info["wrap_wall"] = nbrs[near] if near is not None else max(
+                        nbrs, key=lambda k: math.hypot(walls[k][2] - walls[k][0], walls[k][3] - walls[k][1]))
             elif info is not None:
                 info = None                                                 # apartments keep the ribbon windows
             self._houses[idx] = info
@@ -1362,6 +1371,9 @@ class Renderer3D:
         self._poly(surf, [(x0, y0, z0), (x1, y1, z1), (x1, y1, h), (x0, y0, h)], self.col(base, sh, fog), ink)
         if st["house"]:
             self._draw_house_wall(surf, idx, st["house"], wi, x0, y0, x1, y1, nx, ny, h, z0, z1, sh, fog, ink)
+        ex = st["ex"]
+        if ex and ex.get("plinth") and dist < SHOP_DETAIL:                # a stone or painted base course
+            self._poly(surf, [(x0, y0, z0), (x1, y1, z1), (x1, y1, 1.6), (x0, y0, 1.6)], self.col(tuple(ex["plinth"]), sh, fog), ink)
         if wi in st["shops"]:
             self._draw_shop_front(surf, idx, st["ex"], x0, y0, x1, y1, h, sh, fog, ink)
         elif st["win"]:
@@ -1423,7 +1435,7 @@ class Renderer3D:
                     continue
                 rect(uc - ww / 2 - 0.12, uc + ww / 2 + 0.12, z - 0.12, z + 1.42, trim)
                 rect(uc - ww / 2, uc + ww / 2, z, z + 1.3, glass)
-        if front and house["porch"]:
+        if house["porch"] and (front or wi == house.get("wrap_wall")):
             self._draw_porch(surf, x0, y0, ux, uy, nx, ny, L, fh, sh, fog, ink)
 
     def _draw_shop_front(self, surf, idx, ex, x0, y0, x1, y1, h, sh, fog, ink):
@@ -1497,6 +1509,8 @@ class Renderer3D:
             house = st["house"]
             self._draw_roof(surf, roof, ex["roof_colour"], fog, ink, wall=base,
                             attic=house is not None and house["kind"] in ("cape", "two_storey"))
+            if ex.get("dormers") and dist < HOUSE_DETAIL * 1.5:
+                self._draw_dormers(surf, idx, b, ex, base, fog, ink)
             if ex.get("chimney"):
                 self._draw_chimney(surf, ex["chimney"], fog, ink)
         elif self.cz > h:
@@ -1511,6 +1525,84 @@ class Renderer3D:
                 self._draw_turret(surf, b, ex["axis"], base, fog, ink)
             elif steeple == "twin":
                 self._draw_twin_towers(surf, b, ex["axis"], base, fog, ink)
+
+    def _dormer_frame(self, idx, b, ex):
+        """(centre x, y, along-ridge unit, across unit pointing to the street side, half length, half width) or None."""
+        key = ("dormer", idx)
+        if key not in self._houses:
+            pts = b[5]
+            frame = None
+            if len(pts) == 4:
+                cx, cy = b[0], b[1]
+                e1 = (pts[1][0] - pts[0][0], pts[1][1] - pts[0][1])
+                e2 = (pts[2][0] - pts[1][0], pts[2][1] - pts[1][1])
+                l1, l2 = math.hypot(*e1), math.hypot(*e2)
+                across = self.world.buildings[idx].get("ridge_across", False)
+                e, hl, hw = (e1, l1 / 2, l2 / 2) if (l1 >= l2) != bool(across) else (e2, l2 / 2, l1 / 2)
+                L = math.hypot(*e) or 1.0
+                ux, uy = e[0] / L, e[1] / L
+                vx, vy = -uy, ux
+                side = 1.0
+                for s in (1.0, -1.0):                                       # dormers go on the slope facing the street
+                    wx, wy = cx + s * vx * hw, cy + s * vy * hw
+                    if archetypes.front_wall([(wx - ux, wy - uy, wx + ux, wy + uy, s * vx, s * vy)], self.world.on_road, 40.0) == 0:
+                        side = s
+                        break
+                frame = (cx, cy, ux, uy, vx * side, vy * side, hl, hw)
+            self._houses[key] = frame
+        return self._houses[key]
+
+    def _draw_dormers(self, surf, idx, b, ex, base, fog, ink):
+        """Dormers on the street-facing roof slope: a little upright front with a window and its own small gable."""
+        fr = self._dormer_frame(idx, b, ex)
+        if fr is None:
+            return
+        cx, cy, ux, uy, vx, vy, hl, hw = fr
+        h = b[2]
+        bld = self.world.buildings[idx]
+        rh = float(bld.get("roof_height") or 0.0)
+        kind = bld.get("roof")
+        if rh < 1.6 or hw < 2.0 or kind not in ("gable", "hip", "mansard"):
+            return
+        if kind == "mansard":                                              # steep skirt: the dormer stands in it
+            vf, z0, ztop = hw - 0.2, h + 0.2, h + min(rh - 0.2, 1.9)
+            vb = hw - min(rh * 0.55, hw * 0.5, hl * 0.5) - 0.1
+        else:
+            vf = hw - 0.9
+            z0 = h + rh * (1 - vf / hw)
+            ztop = z0 + 1.55
+            if ztop + 0.6 > h + rh:
+                return                                                     # roof too shallow for a dormer
+            vb = max(0.2, hw * (1 - (ztop + 0.4 - h) / rh))
+        hs = self.st["house"]
+        roof_col = tuple(ex.get("roof_colour") or self.st["slate"])
+        n = ex["dormers"]
+        w = 1.4
+
+        def P(u, v, z):
+            return (cx + ux * u + vx * v, cy + uy * u + vy * v, z)
+
+        def roof_z(v):
+            return ztop if kind == "mansard" else h + rh * (1 - v / hw)
+        front_seen = (self.cx - (cx + vx * vf)) * vx + (self.cy - (cy + vy * vf)) * vy > 0
+        for k in range(n):
+            uc = -hl + 2 * hl * (k + 0.5) / n
+            a, c = uc - w / 2, uc + w / 2
+            for su in (-1, 1):                                             # the cheek (side) that faces the camera
+                ue = uc + su * w / 2
+                if (self.cx - (cx + ux * ue)) * ux * su + (self.cy - (cy + uy * ue)) * uy * su > 0:
+                    self._poly(surf, [P(ue, vf, z0), P(ue, vf, ztop), P(ue, vb, ztop), P(ue, vb, roof_z(vb))],
+                               self.col(base, 1, fog), ink)
+            if front_seen:
+                self._poly(surf, [P(a, vf, z0), P(c, vf, z0), P(c, vf, ztop), P(a, vf, ztop)], self.col(base, 3, fog), ink)
+                self._poly(surf, [P(a, vf, ztop), P(c, vf, ztop), P(uc, vf, ztop + 0.6)], self.col(base, 3, fog), ink)
+                self._poly(surf, [P(a + 0.2, vf + 0.02, z0 + 0.25), P(c - 0.2, vf + 0.02, z0 + 0.25),
+                                  P(c - 0.2, vf + 0.02, ztop - 0.15), P(a + 0.2, vf + 0.02, ztop - 0.15)], self.col(hs["trim"], 3, fog))
+                self._poly(surf, [P(a + 0.32, vf + 0.03, z0 + 0.37), P(c - 0.32, vf + 0.03, z0 + 0.37),
+                                  P(c - 0.32, vf + 0.03, ztop - 0.27), P(a + 0.32, vf + 0.03, ztop - 0.27)], self.col(hs["glass"], 3, fog))
+            for su in (-1, 1):                                             # the dormer's own little gable roof
+                self._poly(surf, [P(uc + su * (w / 2 + 0.12), vf + 0.15, ztop - 0.05), P(uc + su * (w / 2 + 0.12), vb, ztop - 0.05),
+                                  P(uc, vb, ztop + 0.6), P(uc, vf + 0.15, ztop + 0.6)], self.col(roof_col, 2 if su < 0 else 3, fog), ink)
 
     def _draw_chimney(self, surf, ch, fog, ink):
         """A brick chimney standing on the ridge: the sides that face the camera, then the cap."""

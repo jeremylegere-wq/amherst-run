@@ -37,6 +37,150 @@
         76,
         76
       ]
+    },
+    {
+      "name": "233 Victoria St E - wing",
+      "preset": "house",
+      "width": 9.0,
+      "depth": 7.5,
+      "material": "clapboard",
+      "_note": "from reference photos: Greek-revival two-storey main house, 1.5-storey wing with dormer, garage wing",
+      "height": 3.9,
+      "roof": "gable",
+      "roof_height": 3.0,
+      "colour": [
+        132,
+        140,
+        150
+      ],
+      "roof_colour": [
+        150,
+        152,
+        158
+      ],
+      "chimney": 0.0,
+      "dormers": 1,
+      "arch": "cape",
+      "lat": 45.8412485,
+      "lon": -64.1976394,
+      "facing": 322.0
+    },
+    {
+      "name": "233 Victoria St E - garage wing",
+      "preset": "house",
+      "width": 11.0,
+      "depth": 7.0,
+      "material": "clapboard",
+      "_note": "from reference photos: Greek-revival two-storey main house, 1.5-storey wing with dormer, garage wing",
+      "height": 3.0,
+      "roof": "gable",
+      "roof_height": 2.3,
+      "colour": [
+        132,
+        140,
+        150
+      ],
+      "roof_colour": [
+        150,
+        152,
+        158
+      ],
+      "arch": "garage",
+      "lat": 45.8411949,
+      "lon": -64.197743,
+      "facing": 322.0
+    },
+    {
+      "name": "Moffatt House",
+      "preset": "victorian",
+      "width": 10.5,
+      "depth": 11.0,
+      "height": 7.0,
+      "roof": "mansard",
+      "roof_height": 3.4,
+      "material": "clapboard",
+      "colour": [
+        170,
+        180,
+        192
+      ],
+      "roof_colour": [
+        66,
+        70,
+        80
+      ],
+      "dormers": 3,
+      "arch": "two_storey+porch",
+      "_note": "96 Church St, Moffatt House c.1873 (Canadian Register of Historic Places + from reference photos): Second Empire mansard, dormers, bay windows, porch",
+      "lat": 45.8314409,
+      "lon": -64.2078238,
+      "facing": 211.8
+    },
+    {
+      "name": "Moffatt House - bay window",
+      "preset": "shop",
+      "width": 2.8,
+      "depth": 2.0,
+      "height": 6.6,
+      "roof": "flat",
+      "material": "clapboard",
+      "colour": [
+        170,
+        180,
+        192
+      ],
+      "_note": "two-storey bay window (from reference photos)",
+      "lat": 45.8313789,
+      "lon": -64.2078395,
+      "facing": 211.8
+    },
+    {
+      "name": "177 Victoria St E - turret",
+      "preset": "garage",
+      "sides": 8,
+      "width": 4.4,
+      "height": 10.4,
+      "roof": "cone",
+      "roof_height": 5.2,
+      "roof_colour": [
+        70,
+        74,
+        84
+      ],
+      "material": "granite",
+      "colour": [
+        146,
+        128,
+        108
+      ],
+      "_note": "three-storey round stone turret with a conical roof, north-west corner (from reference photos)",
+      "lat": 45.8379817,
+      "lon": -64.2062661,
+      "facing": 329.4
+    },
+    {
+      "name": "177 Victoria St E - round bay",
+      "preset": "garage",
+      "sides": 8,
+      "width": 3.6,
+      "height": 6.4,
+      "roof": "cone",
+      "roof_height": 2.6,
+      "roof_colour": [
+        70,
+        74,
+        84
+      ],
+      "material": "granite",
+      "colour": [
+        146,
+        128,
+        108
+      ],
+      "_note": "two-storey round stone bay with a conical roof, west side (from reference photos)",
+      "lat": 45.8380119,
+      "lon": -64.20623,
+      "facing": 303.4
     }
   ]
 }

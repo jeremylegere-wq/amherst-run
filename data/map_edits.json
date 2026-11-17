@@ -2552,6 +2552,70 @@
      58
     ],
     "_note": "Armoury 1915 (Canadian Register of Historic Places): limestone entry block with two towers, brick drill hall with gambrel roof (drawn as gable)"
+   },
+   {
+    "at": [
+     919.85,
+     -1330.49
+    ],
+    "colour": [
+     238,
+     238,
+     232
+    ],
+    "height": 6.7,
+    "arch": "two_storey+wrap",
+    "_note": "177 Victoria St E, 1907 (Canadian Register of Historic Places + from reference photos): white shingles, wrap-around veranda, stone turret and round bays; outline simplified to its bounding rectangle so it can take the hipped roof",
+    "points": [
+     [
+      917.86,
+      -1320.01
+     ],
+     [
+      909.18,
+      -1332.33
+     ],
+     [
+      918.99,
+      -1339.25
+     ],
+     [
+      927.67,
+      -1326.93
+     ]
+    ],
+    "roof": "hip",
+    "roof_height": 3.6,
+    "roof_colour": [
+     70,
+     74,
+     84
+    ],
+    "dormers": 1
+   },
+   {
+    "at": [
+     1585.25,
+     -1702.1
+    ],
+    "colour": [
+     178,
+     200,
+     226
+    ],
+    "height": 6.6,
+    "roof": "gable",
+    "roof_height": 3.2,
+    "roof_colour": [
+     150,
+     152,
+     158
+    ],
+    "chimney": 0.55,
+    "arch": "two_storey",
+    "material": "clapboard",
+    "ridge_across": true,
+    "_note": "233 Victoria St E main house c.1845 (Canadian Register of Historic Places + reference photos): two-storey Classical Revival, light blue clapboard, gable end to the street, corner pilasters; the wing and garage wing are custom buildings"
    }
   ]
  },

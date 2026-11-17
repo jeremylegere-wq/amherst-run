@@ -44,9 +44,10 @@ def load_styles(path=STYLES_PATH):
 
 
 STYLES = load_styles()
-ROOFS = ("flat", "gable", "hip", "mansard")
+ROOFS = ("flat", "gable", "hip", "mansard", "cone")
+PASS_THROUGH = ("dormers", "plinth", "arch", "storeys", "shopfront", "tower", "steeple", "ridge_across")
 ROOF_COLOURS = {"slate": (74, 80, 100), "shingle": (126, 66, 58), "copper": (74, 140, 120), "tin": (150, 156, 166)}
-DEFAULT_ROOF_COLOUR = {"mansard": "slate", "gable": "shingle", "hip": "shingle"}
+DEFAULT_ROOF_COLOUR = {"mansard": "slate", "gable": "shingle", "hip": "shingle", "cone": "slate"}
 MAX_SIZE = 200.0   # malls are ~175 m wide
 ORIGIN = (45.8167, -64.2167)      # map origin when a map file does not say (the Amherst maps use this)
 
@@ -95,6 +96,16 @@ def nearest_road(roads, x, y, drivable_only=True):
     return best
 
 
+def polygon_footprint(cx, cy, facing, width, sides):
+    """Regular polygon (a round tower or bay drawn with `sides` flat faces) of diameter `width`, a face to the front."""
+    out = []
+    r = width / 2.0
+    for k in range(sides):
+        a = math.radians(facing) + math.pi / sides + 2 * math.pi * k / sides
+        out.append([round(cx + r * math.sin(a), 2), round(cy - r * math.cos(a), 2)])
+    return out
+
+
 def footprint(cx, cy, facing, width, depth):
     """Rectangle centred on (cx, cy) whose front (a `width`-long side) looks along compass bearing `facing`."""
     fx, fy = compass_vec(facing)
@@ -108,7 +119,14 @@ def footprint(cx, cy, facing, width, depth):
 
 def roof_faces(pts, h, kind, rh, across=False):
     """Roof polygons (lists of (x, y, z)) for a 4-cornered footprint; [] for flat roofs or other footprints.
-    The ridge runs along the long side, or across it (the short way) when `across` is true (cross-gabled houses)."""
+    The ridge runs along the long side, or across it (the short way) when `across` is true (cross-gabled houses).
+    A "cone" roof works on any footprint: one face from each wall up to a point over the middle (towers, round bays)."""
+    if kind == "cone" and rh > 0 and len(pts) >= 3:
+        cx = sum(p[0] for p in pts) / len(pts)
+        cy = sum(p[1] for p in pts) / len(pts)
+        n = len(pts)
+        return [[(pts[k][0], pts[k][1], h), (pts[(k + 1) % n][0], pts[(k + 1) % n][1], h), (cx, cy, h + rh)]
+                for k in range(n)]
     if kind not in ("gable", "hip", "mansard") or rh <= 0 or len(pts) != 4:
         return []
     cx = sum(p[0] for p in pts) / 4.0
@@ -183,7 +201,7 @@ def resolve(spec):
         preset = "house"
     s = dict(PRESETS[preset])
     for k in ("width", "depth", "height", "roof", "roof_height", "roof_colour", "material", "colour", "landmark", "label",
-              "chimney"):
+              "chimney", "sides") + PASS_THROUGH:
         if k in spec and spec[k] is not None:
             s[k] = spec[k]
     if s["roof"] not in ROOFS:
@@ -224,7 +242,8 @@ def make_building(spec, meta, roads):
         dist = road_half + float(spec["setback"]) + s["depth"] / 2.0
         d0 = math.hypot(qx - x, qy - y) or 1.0
         x, y = qx - (qx - x) / d0 * dist, qy - (qy - y) / d0 * dist
-    pts = footprint(x, y, facing, s["width"], s["depth"])
+    sides = int(s.get("sides") or 4)
+    pts = polygon_footprint(x, y, facing, s["width"], sides) if sides >= 5 else footprint(x, y, facing, s["width"], s["depth"])
     samples = list(pts) + [((a[0] + b[0]) / 2, (a[1] + b[1]) / 2) for a, b in zip(pts, pts[1:] + pts[:1])] + [(x, y)]
     if roads and any(nearest_road(roads, px, py)[0] < 0.5 for px, py in samples):
         warnings.append("overlaps a road - move it back or set \"setback\"")
@@ -241,6 +260,9 @@ def make_building(spec, meta, roads):
         b["roof_colour"] = list(ROOF_COLOURS[rc]) if isinstance(rc, str) and rc in ROOF_COLOURS else [int(c) for c in rc][:3]
         if s.get("chimney") is not None and s["chimney"] is not False:
             b["chimney"] = 0.3 if s["chimney"] is True else max(-0.9, min(0.9, float(s["chimney"])))
+    for k in PASS_THROUGH:
+        if s.get(k) is not None:
+            b[k] = list(s[k]) if isinstance(s[k], tuple) else s[k]
     if s.get("landmark"):
         b["landmark"] = s["landmark"]
     if s.get("label"):

@@ -56,7 +56,8 @@ def classify(b, i=0):
         if kind not in KINDS:
             return None
         storeys = 2 if kind == "two_storey" else (max(2, int(float(b.get("height") or 6) / 2.9)) if kind == "apartment" else 1)
-        return {"kind": kind, "storeys": storeys, "porch": "+porch" in hand}
+        wrap = "+wrap" in hand                                 # a veranda that turns the corner
+        return {"kind": kind, "storeys": storeys, "porch": "+porch" in hand or wrap, "wrap": wrap}
     if b.get("custom") or b.get("landmark") or b.get("role") or b.get("label"):
         return None
     tags = b.get("tags", {})
@@ -88,7 +89,7 @@ def classify(b, i=0):
     return {"kind": kind, "storeys": storeys, "porch": _coin(i, 7) < PORCH_SHARE.get(kind, 0.0)}
 
 
-def front_wall(walls, near_road, reach=30.0, step=3.0):
+def front_wall(walls, near_road, reach=50.0, step=3.0):
     """Index of the wall that faces the street: the one whose outward line meets a road soonest (None if no road
     within reach). walls: (x0, y0, x1, y1, nx, ny, ...) with outward normals; near_road(x, y) -> bool."""
     best, best_d = None, reach + 1.0
