@@ -209,6 +209,10 @@ class World:
         terrain=False ignores elevation.json (flat world, cheaper to draw)."""
         with open(path) as f:
             data = json.load(f)
+        from . import lidar
+        line = lidar.apply(data, lidar.load_beside(path))                       # measured heights and roofs (LiDAR)
+        if line:
+            print(line)
         from . import mapedits
         for line in mapedits.apply(data, mapedits.load_beside(path)):          # your hand edits (tools/map_editor.py)
             print(line)

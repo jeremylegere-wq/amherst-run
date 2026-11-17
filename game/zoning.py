@@ -132,9 +132,15 @@ def look(zone, i, area, four):
     return {}                                              # Open space, flood plain, unzoned
 
 
+MEASURED = ("height", "roof", "roof_height", "ridge_across")      # set from LiDAR on "lidar" buildings (game/lidar.py)
+
+
 def plain(b):
-    """True for an ordinary OSM building: nothing about its look has been set by data, a landmark or the player."""
-    return not any(k in b for k in ("material", "height", "landmark", "role", "label", "roof", "colour", "custom"))
+    """True for an ordinary OSM building: nothing about its look has been set by data, a landmark or the player.
+    A LiDAR-measured height and roof do not count: the zone still gives the building its colours and materials."""
+    measured = MEASURED if b.get("lidar") else ()
+    return not any(k in b and k not in measured
+                   for k in ("material", "height", "landmark", "role", "label", "roof", "colour", "custom"))
 
 
 def apply(data, zoning):
@@ -142,7 +148,7 @@ def apply(data, zoning):
     counts = {}
     for i, b in enumerate(data["buildings"]):
         tags = b.get("tags", {})
-        if not plain(b) or tags.get("height") or tags.get("building:levels"):
+        if not plain(b) or ((tags.get("height") or tags.get("building:levels")) and not b.get("lidar")):
             continue                                      # real data about the building wins over the zone
         pts = b["points"]
         cx, cy = _centroid(pts)
@@ -150,6 +156,8 @@ def apply(data, zoning):
         fields = look(z, i, _area(pts), len(pts) == 4)
         if fields:
             for k, v in fields.items():
+                if b.get("lidar") and k in MEASURED:
+                    continue                              # measured beats the zone's guess
                 b[k] = list(v) if isinstance(v, tuple) else v
             b["zone"] = z
             counts[z] = counts.get(z, 0) + 1

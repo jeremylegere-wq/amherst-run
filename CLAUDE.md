@@ -132,7 +132,7 @@ amherst-run/
 - [ ] Settings for resolution scale and palette
 
 ## Status (updated 15 Nov 2026)
-- Everything below is built and tested headless (371 tests, `python -m unittest discover -s tests`). Still needs hands-on
+- Everything below is built and tested headless (385 tests, `python -m unittest discover -s tests`). Still needs hands-on
   playtesting: handling, drift/boost feel, 4 player on Batocera, and the map editor with a real mouse.
 - Runs on: Windows/macOS/Linux laptop (development), Batocera (Xbox pads, pygame 2.5.2, Python 3.11), Android/Pydroid.
 - Frame cost (sandbox): ~2-3 ms render, ~17,500 props (about 15,000 trees). A basic laptop may be 2-4x slower.
@@ -189,6 +189,17 @@ amherst-run/
   (custom building), red barn-style shed by the NE corner (custom building, gable since there is no gambrel roof),
   paved driveway (road add, service=driveway), two big maples (props.add). Keep it looking like this; ask before
   changing it. bench_town parks at the spawn, so use `--at 394.6,-835.8` to compare with older downtown numbers.
+- LiDAR heights (17 Nov 2026): `tools/fetch_heights.py` -> `data/building_heights.json` (4,956 of 5,160 buildings:
+  2,493 flat, 1,795 gable, 668 hip; 587 of the 2463 pitched roofs (24%) run across the short side = `ridge_across`). Source NRCan HRDEM
+  `hrdem-lidar` project NS-NSDNR_2020 (1 m DSM/DTM COGs on AWS, OGL-Canada); `tools/cog.py` = range-request BigTIFF
+  reader + pure-Python LZW + EPSG:3979 projection, no new deps. OSM outlines sit ~3 m north of the LiDAR roofs; the tool
+  finds the shift per 500 m cell. Precedence in World.load: lidar.apply (keyed by ORIGINAL footprint centres) ->
+  map edits (hand values win; a hand roof drops ridge_across) -> zoning (colours/materials only for "lidar" buildings).
+  Small footprints measuring > 10.5 m are skipped (tree canopy). Walls came out ~1.9 m lower than the old estimates.
+  Render cost unchanged (roofs replaced the zoning-guessed ones). Tile cache data/.lidar_cache (~250 MB, git-ignored).
+  The start house keeps its hand values (LiDAR says walls 4.6 m, ridge 6.7 m vs the hand 4.4 + 3.6).
+- Benchmarks drift with machine load (17 Nov: street downtown render ~32 ms vs ~17 ms on 15 Nov, same code): compare
+  only back-to-back runs.
 - Painter's algorithm: scene objects must be sorted far-to-near (regression test exists). Walls are 12 m pieces;
   `_fix_wall_order` nudges cars/props within 10 m of a wall to the correct side of it (fixes the ~4-5% of slanted
   cases centre distance got wrong). Building-vs-building and car-vs-tree are still plain distance.
@@ -200,8 +211,8 @@ amherst-run/
 2. DONE (15 Nov 2026): traffic lights / stop signs / right of way (`game/junctions.py`). Follow-ups: visible signs at
    inferred junctions (ask Jeremy where the real ones are), running a red light adds heat.
 3. DONE (15 Nov 2026): real house numbers from the NS Civic Address File (see Status).
-4. Building heights from LiDAR (OSM has heights for only 14 of 5,160 buildings, so OSM levels are not enough);
-   roof shapes; doors and windows by building type and zone.
+4. DONE (17 Nov 2026) heights + roof shapes from LiDAR (see Status). Next: house archetypes (porches, dormers,
+   foundations, gambrel roofs, doors/windows by wall length) assigned from footprint + LiDAR + zoning, close-range LOD.
 5. Vehicle realism: suspension lean and pitch, tyre marks and smoke on drift, engine and tyre sound, per-vehicle handling.
 6. Pedestrians (crossings, footpaths), parked cars along streets, road markings and signs from Mapillary (check licence first).
 7. DONE (15 Nov 2026): weather and time of day. Follow-ups: night, rain, fog starting closer (FOG_START is global).

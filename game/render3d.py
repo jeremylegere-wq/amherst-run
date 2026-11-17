@@ -267,7 +267,7 @@ def _clip_near(cam):
     return out
 
 
-def _chimney(pts, h, rh, at, size=0.75, above=1.1):
+def _chimney(pts, h, rh, at, size=0.75, above=1.1, across=False):
     """(4 corners, z bottom, z top) of a chimney on the ridge of a 4-cornered gable/hip roof.
     `at` is the place along the ridge, -1..1 of its half length (0 = middle)."""
     cx = sum(p[0] for p in pts) / 4.0
@@ -275,7 +275,7 @@ def _chimney(pts, h, rh, at, size=0.75, above=1.1):
     e1 = (pts[1][0] - pts[0][0], pts[1][1] - pts[0][1])
     e2 = (pts[2][0] - pts[1][0], pts[2][1] - pts[1][1])
     l1, l2 = math.hypot(*e1), math.hypot(*e2)
-    e, hl = (e1, l1 / 2.0) if l1 >= l2 else (e2, l2 / 2.0)              # the ridge runs along the long side
+    e, hl = (e1, l1 / 2.0) if (l1 >= l2) != bool(across) else (e2, l2 / 2.0)   # the ridge: long side unless across
     L = max(1e-6, math.hypot(*e))
     ux, uy = e[0] / L, e[1] / L
     vx, vy = -uy, ux
@@ -509,14 +509,15 @@ class Renderer3D:
                   "tower": b.get("tower", False),
                   "axis": math.atan2(longest[3] - longest[1], longest[2] - longest[0]),
                   "roof": None}
-            faces = roof_faces(pts, height, roof, b.get("roof_height", 0.0)) if roof else []
+            faces = roof_faces(pts, height, roof, b.get("roof_height", 0.0), b.get("ridge_across", False)) if roof else []
             if faces:
                 pivot = (cx, cy, height)
                 ex["roof"] = [(f, face_normal(f, pivot)) for f in faces]
                 ex["roof_colour"] = tuple(b.get("roof_colour") or self.st["slate"])
                 ex["roof_top"] = roof == "mansard"
                 if b.get("chimney") is not None and roof in ("gable", "hip"):
-                    ex["chimney"] = _chimney(pts, height, b.get("roof_height", 0.0), float(b["chimney"]))
+                    ex["chimney"] = _chimney(pts, height, b.get("roof_height", 0.0), float(b["chimney"]),
+                                             across=b.get("ridge_across", False))
             self.extras[i] = ex
 
     def _prep_graffiti(self):

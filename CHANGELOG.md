@@ -9,6 +9,13 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+### Added
+- Real building heights and roof shapes from LiDAR (NRCan HRDEM, 2020 Nova Scotia survey): `tools/fetch_heights.py`
+  measures every building (4,956 of 5,160) and fits flat, gable (either direction) or hip roofs; the game applies
+  `data/building_heights.json` under the hand edits and over the zoning guesses. `tools/cog.py` reads the province-wide
+  cloud GeoTIFFs tile by tile with the standard library + numpy (no new dependency).
+- Roofs can run across a building (`ridge_across`), for cross-gabled houses.
+
 ## [0.1.0] - 2026-11-15
 First public release.
 

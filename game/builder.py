@@ -106,8 +106,9 @@ def footprint(cx, cy, facing, width, depth):
     return out
 
 
-def roof_faces(pts, h, kind, rh):
-    """Roof polygons (lists of (x, y, z)) for a 4-cornered footprint; [] for flat roofs or other footprints."""
+def roof_faces(pts, h, kind, rh, across=False):
+    """Roof polygons (lists of (x, y, z)) for a 4-cornered footprint; [] for flat roofs or other footprints.
+    The ridge runs along the long side, or across it (the short way) when `across` is true (cross-gabled houses)."""
     if kind not in ("gable", "hip", "mansard") or rh <= 0 or len(pts) != 4:
         return []
     cx = sum(p[0] for p in pts) / 4.0
@@ -117,7 +118,7 @@ def roof_faces(pts, h, kind, rh):
     l1, l2 = math.hypot(*e1), math.hypot(*e2)
     if l1 < 0.1 or l2 < 0.1:
         return []
-    if l1 >= l2:
+    if (l1 >= l2) != bool(across):
         u, hl, hw = (e1[0] / l1, e1[1] / l1), l1 / 2.0, l2 / 2.0
     else:
         u, hl, hw = (e2[0] / l2, e2[1] / l2), l2 / 2.0, l1 / 2.0

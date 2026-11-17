@@ -18,6 +18,8 @@ with on-screen touch controls.
 - **Buildings, parks and landmarks** from OpenStreetMap: the red sandstone downtown, the Court House, Victoria Square
   and its war memorial, the Dominion Building, churches, banks, the County Museum, the Welcome Centre lighthouse, and the
   wind turbines on the marsh skyline.
+- **Building heights and roof shapes** measured from a 2020 LiDAR survey: every house's real height, and whether
+  its roof is flat, gabled (either way round) or hipped.
 - **Hills** from real elevation data: downtown sits on its ridge, the Tantramar marsh is flat at sea level.
 - **House numbers** from the Nova Scotia Civic Address File: parcel jobs send you to real addresses.
 - **Woods and zoning** from provincial open data, so each district looks like itself.
@@ -181,6 +183,13 @@ latitude/longitude. Hills are stretched 1.5x (`VERTICAL_SCALE` in `game/terrain.
 fog that hides the skyline, golden hour with long warm shadows, and winter snow with falling flakes. The presets are
 style data in `WEATHER` in `game/render3d.py`, so they work with both the street and the retro style.
 
+### Real building heights (LiDAR)
+`data/building_heights.json` (included) holds the measured height and roof shape of 4,956 of the 5,160 buildings, from
+Natural Resources Canada's 1 m LiDAR elevation models (survey NS-NSDNR_2020). Refresh it with
+`python tools/fetch_heights.py`: it reads only the 512 m tiles under the town from the province-wide cloud files (about
+250 MB the first time, cached in `data/.lidar_cache`), lines the OpenStreetMap outlines up with the LiDAR roofs, and fits
+each roof. Hand edits in `data/map_edits.json` still win over the measurements.
+
 ### Real house numbers
 `data/addresses.json` (included) has the Nova Scotia Civic Address File points for the map area. Parcel jobs use the real
 number nearest the drop point on the same street. Refresh it with `python tools/fetch_addresses.py`.
@@ -273,6 +282,9 @@ Civic addresses (`tools/fetch_addresses.py`, `data/addresses.json`): Nova Scotia
 Nova Scotia open data portal. Contains information licensed under the Open Government Licence - Nova Scotia.
 Elevation (`data/elevation.json`, `tools/fetch_elevation.py`): Terrain Tiles on AWS (Mapzen; sources include NRCan CDEM and
 SRTM).
+Building heights (`data/building_heights.json`, `tools/fetch_heights.py`): Natural Resources Canada, High Resolution
+Digital Elevation Model (HRDEM), LiDAR project NS-NSDNR_2020. Contains information licensed under the Open Government
+Licence - Canada.
 Land cover and zoning: Province of Nova Scotia; contains information licensed under the Open Government Licence - Nova Scotia.
 All code, art and names in this project are original.
 

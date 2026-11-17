@@ -22,7 +22,7 @@ EDITS_NAME = "map_edits.json"
 TOLERANCE = 3.0                     # metres: how far the map may have moved since the edit was made
 ROAD_FIELDS = ("type", "width", "name", "speed", "rc", "lanes", "oneway", "surface", "service", "ref")
 BUILDING_FIELDS = ("height", "material", "colour", "roof", "roof_height", "roof_colour", "landmark", "label", "role",
-                   "chimney")
+                   "chimney", "ridge_across")
 MIN_OVERLAP = 0.35                  # metres of intrusion before something counts as overlapping (walls touch in rows)
 
 
@@ -182,6 +182,8 @@ def apply(data, doc, mark=False):
         for k in BUILDING_FIELDS:
             if k in rep:
                 blds[i][k] = rep[k]
+        if "roof" in rep and "ridge_across" not in rep:
+            blds[i].pop("ridge_across", None)            # a hand-set roof replaces the measured one completely
         blds[i]["edited"] = True
         done += 1
     for at in rdoc.get("delete", []):
