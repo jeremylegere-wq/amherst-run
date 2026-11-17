@@ -75,7 +75,7 @@ jobs:
       # Byte-compiles every file, including tools the tests never import, so syntax newer than this Python
       # (e.g. 3.12-only f-strings on Batocera's 3.11) fails here instead of on someone's machine.
       - name: Compile every Python file
-        run: python -m compileall -q -x "[/\\]\.venv" game tools tests update_map.py play_android.py
+        run: python -m compileall -q game tools tests update_map.py play_android.py
 
       - name: Run the unit tests
         run: python -m unittest discover -s tests -v
