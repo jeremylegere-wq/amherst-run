@@ -26,6 +26,8 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 - `tools/fetch_heights.py --only-new` measures just the buildings the heights file does not have yet.
 
 ### Changed
+- CI now also tests Batocera's exact versions (Python 3.11, pygame 2.5.2, numpy 1.24.4) and macOS, compiles every
+  Python file, runs weekly on its own, and watches Python 3.14 as a known gap (no pygame wheels yet; allowed to fail).
 - The real woods (NSTDB land cover) now grow everywhere on the map, not just near the start: their trees are made
   per 40 m prop cell the first time the game looks there, instead of all at load. Before, the street trees used up
   the whole prop budget, so the woods got almost no trees and the rural loop was bare grass. Every tree site comes

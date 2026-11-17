@@ -7,6 +7,10 @@ on:
     branches: [main]
   pull_request:
   workflow_call:
+  workflow_dispatch:          # "Run workflow" button on the Actions tab
+  schedule:
+    # Weekly, with no code change: catches breakage from outside (new runner images, new pygame/numpy releases).
+    - cron: "17 6 * * 1"
 
 permissions:
   contents: read
@@ -23,18 +27,27 @@ env:
 
 jobs:
   test:
-    name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python }}${{ matrix.deps == 'batocera' && ', Batocera versions' || '' }}${{ matrix.experimental && ', allowed to fail' || '' }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 25
+    # A job marked experimental shows its result but cannot fail the run (a known gap we are watching).
+    continue-on-error: ${{ matrix.experimental == true }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Linux is the main target (Batocera, Pydroid); Windows covers the desktop quick start.
+          # Linux is the main target (Batocera, Pydroid); Windows and macOS cover the desktop quick start.
+          # Batocera parity: its Python 3.11 with the OLDEST versions requirements.txt allows (pygame 2.5.2 is what
+          # Batocera ships). The other jobs install the newest releases, so together they cover both ends.
+          - { os: ubuntu-latest, python: "3.11", deps: batocera }
           - { os: ubuntu-latest, python: "3.11" }
           - { os: ubuntu-latest, python: "3.12" }
           - { os: ubuntu-latest, python: "3.13" }
           - { os: windows-latest, python: "3.13" }
+          - { os: macos-latest, python: "3.13" }
+          # Known gap: pygame 2.6.1 (newest on PyPI) has no Python 3.14 wheels, so pip has to build it from
+          # source. Kept visible until pygame ships 3.14 wheels; then drop "experimental".
+          - { os: ubuntu-latest, python: "3.14", experimental: true }
     steps:
       - name: Check out the code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -48,8 +61,21 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
-      - name: Install dependencies
+      - name: Install dependencies (newest allowed)
+        if: matrix.deps != 'batocera'
         run: python -m pip install -r requirements.txt
+
+      - name: Install dependencies (Batocera versions - the minimums in requirements.txt)
+        if: matrix.deps == 'batocera'
+        run: python -m pip install "pygame==2.5.2" "numpy==1.24.4"
+
+      - name: Show the versions under test
+        run: python -c "import sys, pygame, numpy; print(sys.version); print('pygame', pygame.version.ver, 'numpy', numpy.__version__)"
+
+      # Byte-compiles every file, including tools the tests never import, so syntax newer than this Python
+      # (e.g. 3.12-only f-strings on Batocera's 3.11) fails here instead of on someone's machine.
+      - name: Compile every Python file
+        run: python -m compileall -q -x "[/\\]\.venv" game tools tests update_map.py play_android.py
 
       - name: Run the unit tests
         run: python -m unittest discover -s tests -v

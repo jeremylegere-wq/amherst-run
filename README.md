@@ -90,7 +90,9 @@ knowledge, like where the demolished buildings stood and where the game starts.
 Clone the repository (`git clone https://github.com/jeremylegere-wq/amherst-run.git`) or use **Code > Download ZIP** on
 GitHub, then follow the section below for your device. When there are tagged versions, `amherst-run-vX.Y.Z.zip` and
 `SHA256SUMS.txt` are on the [Releases](https://github.com/jeremylegere-wq/amherst-run/releases) page. You need Python 3.11
-or newer (CI runs 3.11, 3.12 and 3.13) and pygame; numpy is the only other dependency.
+to 3.13 (all tested in CI) and pygame; numpy is the only other dependency. **Python 3.14:** pygame has no ready-made
+3.14 package on PyPI yet, so `pip install` tries to build it and usually fails. Use Python 3.13, or your Linux
+distribution's own pygame (for example `sudo apt install python3-pygame python3-numpy`).
 
 ## Play
 
@@ -317,9 +319,30 @@ Handy extras: `python tools/readme_shots.py` regenerates every picture in this R
 `python tools/bench_town.py [data/amherst_map.json]` benchmark the renderer (budget: 33 ms per frame for everything).
 
 ### Continuous integration
-`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`: the unit tests on Linux (Python 3.11, 3.12,
-3.13) and Windows (3.13), the headless smoke runs, the `ruff` lint, and a check that the release zip builds, has the right
-contents and runs when unpacked. Third-party actions are pinned to commit SHAs and kept current by Dependabot.
+`.github/workflows/ci.yml` runs on every pull request, on pushes to `main`, every Monday on its own (to catch breakage
+from outside: new runner images or library releases), and from the **Run workflow** button on the Actions tab. Each job
+compiles every Python file, runs the unit tests and three headless smoke drives:
+
+| Job | Why it is there |
+|---|---|
+| Linux, Python 3.11 with pygame 2.5.2 + numpy 1.24.4 | Batocera parity: the oldest versions `requirements.txt` allows, which is what Batocera ships |
+| Linux, Python 3.11 / 3.12 / 3.13 (newest pygame and numpy) | The newest releases a desktop install gets |
+| Windows and macOS, Python 3.13 | The desktop quick start |
+| Linux, Python 3.14 (allowed to fail) | Known gap: no pygame wheels for 3.14 on PyPI yet. Its result shows, but it cannot turn the run red |
+
+Plus the `ruff` lint (bug-finding rules only) and a check that the release zip builds, has the right contents and runs
+when unpacked. The release workflow re-runs all of it on the tagged commit. Third-party actions are pinned to commit SHAs
+and kept current by Dependabot (which must not raise the pygame/numpy minimums: Batocera needs them).
+
+When a check is red:
+1. Open the failed job and read the first error, not the last line. `Show the versions under test` says which Python,
+   pygame and numpy it had.
+2. Only one Python or OS failing usually means a newer-only feature (syntax or a library call). Batocera's job failing
+   means something needs a newer pygame/numpy than Batocera has: rewrite it to work on both, do not raise the minimums.
+3. Reproduce locally if you can (`SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python -m unittest discover -s tests`), fix,
+   push, and wait for green before tagging anything. A failure in the weekly run with no code change is an outside
+   change: pin or work around it in a normal commit.
+4. When pygame ships Python 3.14 wheels, the 3.14 job turns green: remove `experimental: true` from it.
 
 ## Making a release
 Versions follow [Semantic Versioning](https://semver.org/) (`0.x` while the game is still being tuned; a breaking change to
