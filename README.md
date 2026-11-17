@@ -328,7 +328,7 @@ compiles every Python file, runs the unit tests and three headless smoke drives:
 | Linux, Python 3.11 with pygame 2.5.2 + numpy 1.24.4 | Batocera parity: the oldest versions `requirements.txt` allows, which is what Batocera ships |
 | Linux, Python 3.11 / 3.12 / 3.13 (newest pygame and numpy) | The newest releases a desktop install gets |
 | Windows and macOS, Python 3.13 | The desktop quick start |
-| Linux, Python 3.14 (allowed to fail) | Known gap: no pygame wheels for 3.14 on PyPI yet. Its result shows, but it cannot turn the run red |
+| Linux, Python 3.14 (install probe) | Known gap: no pygame wheels for 3.14 on PyPI yet. While pip cannot install pygame it passes with a warning; once it can, it runs every check for real |
 
 Plus the `ruff` lint (bug-finding rules only) and a check that the release zip builds, has the right contents and runs
 when unpacked. The release workflow re-runs all of it on the tagged commit. Third-party actions are pinned to commit SHAs
@@ -342,7 +342,9 @@ When a check is red:
 3. Reproduce locally if you can (`SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python -m unittest discover -s tests`), fix,
    push, and wait for green before tagging anything. A failure in the weekly run with no code change is an outside
    change: pin or work around it in a normal commit.
-4. When pygame ships Python 3.14 wheels, the 3.14 job turns green: remove `experimental: true` from it.
+4. When pygame ships Python 3.14 wheels, the 3.14 probe stops warning and runs the tests: then remove `probe: true`.
+   Do not use `continue-on-error` on a whole job to tolerate a known gap: the job still files a failed check, and
+   GitHub shows main as failing.
 
 ## Making a release
 Versions follow [Semantic Versioning](https://semver.org/) (`0.x` while the game is still being tuned; a breaking change to
