@@ -45,10 +45,12 @@ def load_styles(path=STYLES_PATH):
 
 STYLES = load_styles()
 ROOFS = ("flat", "gable", "hip", "mansard", "cone")
-PASS_THROUGH = ("dormers", "plinth", "arch", "storeys", "shopfront", "tower", "steeple", "ridge_across")
+PASS_THROUGH = ("dormers", "plinth", "arch", "storeys", "shopfront", "tower", "steeple", "ridge_across",
+                "front", "door", "door_at", "sidelights", "shutters")
 ROOF_COLOURS = {"slate": (74, 80, 100), "shingle": (126, 66, 58), "copper": (74, 140, 120), "tin": (150, 156, 166)}
 DEFAULT_ROOF_COLOUR = {"mansard": "slate", "gable": "shingle", "hip": "shingle", "cone": "slate"}
 MAX_SIZE = 200.0   # malls are ~175 m wide
+MIN_SIZE = 0.5     # garden arbours and porch posts are thin
 ORIGIN = (45.8167, -64.2167)      # map origin when a map file does not say (the Amherst maps use this)
 
 
@@ -208,8 +210,8 @@ def resolve(spec):
         problems.append("unknown roof %r (flat, gable, hip, mansard)" % (s["roof"],))
         s["roof"] = "flat"
     for k in ("width", "depth"):
-        if not isinstance(s[k], (int, float)) or not 2.0 <= s[k] <= MAX_SIZE:
-            problems.append("%s must be between 2 and %d metres" % (k, MAX_SIZE))
+        if not isinstance(s[k], (int, float)) or not MIN_SIZE <= s[k] <= MAX_SIZE:
+            problems.append("%s must be between %g and %d metres" % (k, MIN_SIZE, MAX_SIZE))
             s[k] = PRESETS[preset][k]
     if not isinstance(s["height"], (int, float)) or not 0.5 <= s["height"] <= 60.0:     # 0.5: decks, hedges, fences
         problems.append("height must be between 0.5 and 60 metres")

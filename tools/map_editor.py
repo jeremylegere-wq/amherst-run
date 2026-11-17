@@ -38,7 +38,7 @@ BG = (34, 52, 40)
 COL = {"main": (236, 200, 90), "side": (190, 190, 196), "lane": (120, 124, 132)}
 
 
-KEEP_SECTIONS = ("spawn", "props")      # map_edits.json sections the editor does not edit: saved back unchanged
+KEEP_SECTIONS = ("spawn", "props", "cars")      # map_edits.json sections the editor does not edit: saved back unchanged
 
 
 def build_state(map_path, edits_path, custom_path):

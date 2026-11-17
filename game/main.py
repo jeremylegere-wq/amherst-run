@@ -387,10 +387,10 @@ class Game:
                 elif p["kind"] == "lighthouse":
                     pygame.draw.circle(s, (220, 52, 48), (int(sx), int(sy)), max(2, int(1.6 * zoom)))
                     pygame.draw.circle(s, (246, 246, 242), (int(sx), int(sy)), max(1, int(0.8 * zoom)))
-                else:
+                elif p["kind"] != "car_block":
                     pygame.draw.circle(s, (240, 230, 160), (int(sx), int(sy)), 1)
 
-        for c in self.town.cars:
+        for c in self.town.cars + self.r3d.parked_cars():
             if vx0 - 10 < c.x < vx1 + 10 and vy0 - 10 < c.y < vy1 + 10:
                 if self.overview:
                     cx, cy = to_screen((c.x, c.y))

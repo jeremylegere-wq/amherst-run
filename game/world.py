@@ -134,6 +134,20 @@ def sp_height(sp, x, y):
     return best[1] if best else None
 
 
+def parked_blocks(parked):
+    """Invisible collision circles ("car_block" props) covering each parked car: one in the middle, one near each end."""
+    from .car import MODELS
+    out = []
+    for c in parked:
+        spec = MODELS.get(c.get("model"), MODELS["sedan"])
+        r = spec["width"] / 2.0
+        off = max(0.0, spec["length"] / 2.0 - r)
+        fx, fy = math.cos(c["heading"]), math.sin(c["heading"])
+        for a in (-off, 0.0, off):
+            out.append({"kind": "car_block", "x": c["x"] + fx * a, "y": c["y"] + fy * a, "h": 0.0, "r": 0.0, "cr": r})
+    return out
+
+
 class World:
     def __init__(self, data, terrain=None):
         self.custom_path = None
@@ -202,6 +216,9 @@ class World:
                     continue                          # no trees or lamps on or beside a deck and its ramps
                 self._prop_grid[(int(p["x"] // CELL), int(p["y"] // CELL))].append(p)
                 self.props.append(p)
+        self.parked = data.get("parked", [])                  # hand-placed parked cars (map_edits.json "cars")
+        for p in parked_blocks(self.parked):                  # solid: three circles along each car
+            self._prop_grid[(int(p["x"] // CELL), int(p["y"] // CELL))].append(p)
 
     @classmethod
     def load(cls, path, custom="auto", zoning=True, terrain=True):

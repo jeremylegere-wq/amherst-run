@@ -28,7 +28,7 @@ from . import config as C
 from . import streetdetail as SD
 from . import archetypes
 from .builder import face_normal, roof_faces
-from .car import MODELS, PLAYER_PALETTE
+from .car import MODELS, PLAYER_PALETTE, Car
 from .world import CELL
 
 HALF_W_DRAW = 1.45         # train body half width
@@ -486,6 +486,7 @@ class Renderer3D:
         """Per building: (cx, cy, height, colour index, walls, footprint, radius)."""
         self.buildings = {}
         self.extras = {}            # building index -> material / landmark details
+        self._parked_cars = None    # hand-placed parked cars as Car objects (see parked_cars)
         self._houses = {}           # building index -> house details (game/archetypes.py), worked out when first close
         self._shops = {}            # building index -> walls with a shop front (set), worked out when first close
         for i, b in enumerate(self.world.buildings):
@@ -536,6 +537,8 @@ class Renderer3D:
                   "tower": b.get("tower", False), "steeple": b.get("steeple", "spire"),
                   "storeys": b.get("storeys"), "shopfront": b.get("shopfront"), "zone": b.get("zone"),
                   "plinth": b.get("plinth"), "dormers": int(b.get("dormers") or 0),
+                  "front": b.get("front"), "door": b.get("door"), "door_at": b.get("door_at"),
+                  "sidelights": b.get("sidelights"), "shutters": b.get("shutters"),
                   "axis": math.atan2(longest[3] - longest[1], longest[2] - longest[0]),
                   "roof": None}
             faces = roof_faces(pts, height, roof, b.get("roof_height", 0.0), b.get("ridge_across", False)) if roof else []
@@ -744,7 +747,7 @@ class Renderer3D:
         self.n_buildings = 0
         h0 = int(HH - self.focal * math.tan(self.pitch))  # horizon row
         h0 = max(0, min(H, h0))
-        cars = [car] + self._visible_cars(others)
+        cars = [car] + self._visible_cars(list(others) + self.parked_cars())
         self._draw_sky(surf, h0)
         self._draw_clouds(surf, h0)
         if not self.st.get("hide_horizon"):
@@ -779,6 +782,20 @@ class Renderer3D:
             px, py = int(x) % (W + 4) - 2, int(y) % (H + 4) - 2
             big = (seed >> 27) & 3 == 0
             surf.fill(white if big else grey, (px, py, 2 if big else 1, 2 if big else 1))
+
+    def parked_cars(self):
+        """Car objects for the world's hand-placed parked cars (built once)."""
+        if self._parked_cars is None:
+            self._parked_cars = []
+            for p in getattr(self.world, "parked", ()):
+                c = Car(p["x"], p["y"], p["heading"], model=p.get("model") if p.get("model") in MODELS else "sedan")
+                body = tuple(p.get("colour") or (90, 94, 102))
+                c.palette = {"body": body, "lower": (30, 30, 40), "glass": (52, 62, 84), "tail": (200, 40, 40),
+                             "roof": tuple(p.get("roof_colour") or body), "lightbar": False}
+                c.kind = "parked"
+                c.z = self.world.ground(c.x, c.y) if hasattr(self.world, "ground") else 0.0
+                self._parked_cars.append(c)
+        return self._parked_cars
 
     def _visible_cars(self, others):
         out = []
@@ -1134,7 +1151,7 @@ class Renderer3D:
             if pr:
                 pygame.draw.polygon(layer, rgba, pr[0])
         for p in self.world.props_near(cx, cy, 100.0) if hasattr(self.world, "props_near") else ():
-            if p["kind"] == "lamp" or p["kind"] in DETAIL_KINDS or (p["x"] - cx) * fhx + (p["y"] - cy) * fhy < -10.0:
+            if p["kind"] in ("lamp", "car_block") or p["kind"] in DETAIL_KINDS or (p["x"] - cx) * fhx + (p["y"] - cy) * fhy < -10.0:
                 continue
             ox, oy, rr = p["x"] + sdx * p["h"] * 0.6, p["y"] + sdy * p["h"] * 0.6, p["r"] * 0.9
             gz = self._g(p["x"], p["y"]) + 0.05
@@ -1166,6 +1183,8 @@ class Renderer3D:
                 continue
             self._emit_building(objs, i, b, dist)
         for p in self.world.props_near(cx, cy, PROP_DIST) if hasattr(self.world, "props_near") else ():
+            if p["kind"] == "car_block":
+                continue                                 # a parked car's collision circle: the car is drawn as a car
             dx, dy = p["x"] - cx, p["y"] - cy
             fwd = dx * fhx + dy * fhy
             if fwd < -3.0 or abs(dx * rx + dy * ry) > fwd * 0.95 + 6.0:
@@ -1426,8 +1445,18 @@ class Renderer3D:
             info = archetypes.classify(self.world.buildings[idx], idx)
             if info is not None and info["kind"] != "apartment":
                 walls = self.buildings[idx][4]
-                info = dict(info, front=archetypes.front_wall(walls, self.world.on_road))
-                info["door"] = 0.3 + 0.4 * archetypes._coin(idx, 3)        # where along the front wall the door sits
+                ex = self.extras.get(idx) or {}
+                if ex.get("front") is not None:                              # hand-set: compass bearing the front faces
+                    fb = math.radians(ex["front"])
+                    fx, fy = math.sin(fb), -math.cos(fb)
+                    front = max(range(len(walls)), key=lambda k: walls[k][4] * fx + walls[k][5] * fy)
+                else:
+                    front = archetypes.front_wall(walls, self.world.on_road)
+                info = dict(info, front=front)
+                info["door"] = ex["door_at"] if ex.get("door_at") is not None else 0.3 + 0.4 * archetypes._coin(idx, 3)
+                info["door_rgb"] = tuple(ex["door"]) if ex.get("door") else None
+                info["sidelights"] = bool(ex.get("sidelights"))
+                info["shutters"] = tuple(ex["shutters"]) if ex.get("shutters") else None
                 info["wrap_wall"] = None
                 if info.get("wrap") and info["front"] is not None:          # the veranda turns the corner: pick the side
                     n = len(walls)                                            # wall that sees a street sooner, else the longer
@@ -1518,7 +1547,12 @@ class Renderer3D:
         door_u = None
         if front:
             wl = math.hypot(whole[2] - whole[0], whole[3] - whole[1])
-            du = house["door"] * wl - ((x0 - whole[0]) * ux + (y0 - whole[1]) * uy)
+            dm = house["door"] * wl
+            n_pieces = math.ceil(wl / WALL_PIECE) if wl > WALL_PIECE * 1.25 else 1
+            seam = round(dm * n_pieces / wl) * wl / n_pieces
+            if 0.0 < seam < wl and abs(dm - seam) < 0.75:
+                dm = seam + 0.75                                            # off the seam between two wall pieces
+            du = dm - ((x0 - whole[0]) * ux + (y0 - whole[1]) * uy)
             if 0.6 < du < L - 0.6:
                 door_u = du
 
@@ -1532,22 +1566,42 @@ class Renderer3D:
                 w = min(2.6, L - 0.8)
                 rect((L - w) / 2, (L + w) / 2, 0.05, 2.2, self.col(hs["garage_door"], sh, fog))
             return
+        side = 0.0
+        dtop = min(fh + 2.1, h - 0.2)                                       # the door stays under the eaves
         if door_u is not None:
-            rect(door_u - 0.6, door_u + 0.6, fh, fh + 2.25, trim)
-            rect(door_u - 0.48, door_u + 0.48, fh, fh + 2.1, self.col(hs["doors"][idx % len(hs["doors"])], sh, fog))
+            door_rgb = house.get("door_rgb") or hs["doors"][idx % len(hs["doors"])]
+            if house.get("sidelights"):                                       # narrow glass panes either side
+                side = 0.42
+                rect(door_u - 0.6 - side, door_u + 0.6 + side, fh, dtop + 0.15, trim)
+                for s0 in (-1, 1):
+                    a, b = door_u + s0 * 0.54, door_u + s0 * (0.54 + side - 0.08)
+                    rect(min(a, b), max(a, b), fh + 0.35, dtop - 0.05, glass)
+            else:
+                rect(door_u - 0.6, door_u + 0.6, fh, dtop + 0.15, trim)
+            rect(door_u - 0.48, door_u + 0.48, fh, dtop, self.col(door_rgb, sh, fog))
+        shutter = self.col(house["shutters"], sh, fog) if house.get("shutters") else None
         n = max(1, int((L - 0.8) / 2.7))
         ww = 1.2 if kind == "minihome" else 0.95
         sill = fh + (0.9 if kind == "minihome" else 0.85)
         for row in range(house["storeys"]):
-            z = sill + row * 2.8
-            if z + 1.3 > h - 0.25:
-                break
+            z, wh = sill + row * 2.8, 1.3
+            if z + wh > h - 0.25:                                           # low walls: a shorter window, set lower
+                if not front:
+                    break                                                   # front only: bungalows are many (cost)
+                z = max(fh + 0.3, min(z, h - 0.25 - 1.0))
+                wh = min(1.3, h - 0.25 - z)
+                if wh < 0.6:
+                    break
             for k in range(n):
                 uc = L * (k + 0.5) / n
-                if door_u is not None and row == 0 and abs(uc - door_u) < 1.4:
+                if door_u is not None and row == 0 and abs(uc - door_u) < 1.4 + side:
                     continue
-                rect(uc - ww / 2 - 0.12, uc + ww / 2 + 0.12, z - 0.12, z + 1.42, trim)
-                rect(uc - ww / 2, uc + ww / 2, z, z + 1.3, glass)
+                rect(uc - ww / 2 - 0.12, uc + ww / 2 + 0.12, z - 0.12, z + wh + 0.12, trim)
+                rect(uc - ww / 2, uc + ww / 2, z, z + wh, glass)
+                if shutter:                                                     # a shutter each side of the window
+                    for s0 in (-1, 1):
+                        a = uc + s0 * (ww / 2 + 0.16)
+                        rect(min(a, a + s0 * 0.42), max(a, a + s0 * 0.42), z - 0.08, z + wh + 0.08, shutter)
         if house["porch"] and (front or wi == house.get("wrap_wall")):
             self._draw_porch(surf, x0, y0, ux, uy, nx, ny, L, fh, sh, fog, ink)
 
@@ -1656,11 +1710,15 @@ class Renderer3D:
                 ux, uy = e[0] / L, e[1] / L
                 vx, vy = -uy, ux
                 side = 1.0
-                for s in (1.0, -1.0):                                       # dormers go on the slope facing the street
-                    wx, wy = cx + s * vx * hw, cy + s * vy * hw
-                    if archetypes.front_wall([(wx - ux, wy - uy, wx + ux, wy + uy, s * vx, s * vy)], self.world.on_road, 40.0) == 0:
-                        side = s
-                        break
+                if ex.get("front") is not None:                             # hand-set front: dormers on that slope
+                    fb = math.radians(ex["front"])
+                    side = 1.0 if vx * math.sin(fb) - vy * math.cos(fb) >= 0 else -1.0
+                else:
+                    for s in (1.0, -1.0):                                   # dormers go on the slope facing the street
+                        wx, wy = cx + s * vx * hw, cy + s * vy * hw
+                        if archetypes.front_wall([(wx - ux, wy - uy, wx + ux, wy + uy, s * vx, s * vy)], self.world.on_road, 40.0) == 0:
+                            side = s
+                            break
                 frame = (cx, cy, ux, uy, vx * side, vy * side, hl, hw)
             self._houses[key] = frame
         return self._houses[key]

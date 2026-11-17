@@ -9,6 +9,29 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+### Added
+- The map now reaches east of town around the rural loop: Church St out to Highway 204, Hastings Rd round to
+  Highway 6 and back in along Victoria St E (383 new road pieces, joined to the town's roads). `tools/extend_map.py`
+  grows the map without moving its origin, so map edits, heights and addresses still line up, and a re-download
+  (`update_map.py`) adds the area again.
+- Rural homes from LiDAR: OpenStreetMap maps few buildings out there, so `tools/find_homes.py` finds the house at each
+  civic address from the LiDAR roof surface (flat, building-height blobs with open ground around them; tree crowns and
+  hedgerows are rejected): 451 homes and their garages, sheds and barns, then measured like the rest.
+- Two hand-modelled homes from reference photos: a white Cape Cod on Norman St (green roof, two front dormers, navy
+  shutters, door with sidelights, gravel driveway with a dark grey crossover parked in it and a white arbour) and a
+  grey single-storey house on Hastings Rd (LiDAR footprint, deck and steps, gravel loop drive, trees around the clearing).
+- Parked cars in `map_edits.json` (`"cars": {"add": [...]}`): drawn like any car and solid to drive into.
+- House details you can set per building: `front` (the compass bearing the front faces), `door`, `door_at`,
+  `sidelights`, `shutters`.
+- `tools/fetch_heights.py --only-new` measures just the buildings the heights file does not have yet.
+
+### Changed
+- Land outside the town's zoning map counts as residential, so rural homes get house colours and roofs.
+- Low single-storey walls get (shorter) windows on the front instead of none, and doors stay below the eaves.
+
+### Fixed
+- A door in the middle of a long wall could vanish where the wall is cut into pieces for drawing.
+
 ## [0.2.1] - 2026-11-17
 Fixes for hills, roads and street signs.
 

@@ -22,7 +22,8 @@ EDITS_NAME = "map_edits.json"
 TOLERANCE = 3.0                     # metres: how far the map may have moved since the edit was made
 ROAD_FIELDS = ("type", "width", "name", "speed", "rc", "lanes", "oneway", "surface", "service", "ref")
 BUILDING_FIELDS = ("height", "material", "colour", "roof", "roof_height", "roof_colour", "landmark", "label", "role",
-                   "chimney", "ridge_across", "arch", "tower", "steeple", "storeys", "shopfront", "dormers", "plinth")
+                   "chimney", "ridge_across", "arch", "tower", "steeple", "storeys", "shopfront", "dormers", "plinth",
+                   "front", "door", "door_at", "sidelights", "shutters")   # house details: see Renderer3D._house
 MIN_OVERLAP = 0.35                  # metres of intrusion before something counts as overlapping (walls touch in rows)
 
 
@@ -67,6 +68,22 @@ def _project(meta, lat, lon):
         return None
     return (math.radians(lon - lon0) * 6371000.0 * math.cos(math.radians(lat0)),
             -math.radians(lat - lat0) * 6371000.0)
+
+
+def _apply_cars(data, cars):
+    """Parked cars (the one in a driveway...): {"lat", "lon", "bearing" (compass degrees the nose points), "model"
+    (game.car.MODELS), "colour": [r, g, b]}. They go in data["parked"] with x, y and a map heading (radians)."""
+    n = 0
+    for c in cars:
+        xy = _project(data.get("meta", {}), c["lat"], c["lon"])
+        if xy is None:
+            return "parked cars skipped: the map has no origin"
+        b = math.radians(c.get("bearing", 0.0))
+        q = {k: v for k, v in c.items() if k not in ("lat", "lon", "bearing") and not k.startswith("_")}
+        q.update(x=round(xy[0], 2), y=round(xy[1], 2), heading=round(math.atan2(-math.cos(b), math.sin(b)), 4))
+        data.setdefault("parked", []).append(q)
+        n += 1
+    return "parked cars added: %d" % n
 
 
 def _apply_props(data, props):
@@ -160,6 +177,8 @@ def apply(data, doc, mark=False):
         report.append(_apply_spawn(data, doc["spawn"]))
     if doc.get("props", {}).get("add"):
         report.append(_apply_props(data, doc["props"]["add"]))
+    if doc.get("cars", {}).get("add"):
+        report.append(_apply_cars(data, doc["cars"]["add"]))
     gone_b, gone_r = set(), set()
     bkeys = [_bkey(b) for b in blds]                  # computed once: a linear rescan per edit cost seconds at load
     rkeys = [_rkey(r) for r in roads]

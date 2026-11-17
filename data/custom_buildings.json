@@ -262,6 +262,46 @@
       "lat": 45.8234355,
       "lon": -64.2149281,
       "facing": 234.5
+    },
+    {
+      "name": "Norman St arbour",
+      "preset": "garage",
+      "lat": 45.8389292,
+      "lon": -64.201837,
+      "facing": 134.4,
+      "width": 0.7,
+      "depth": 1.8,
+      "height": 2.2,
+      "roof": "gable",
+      "roof_height": 0.35,
+      "colour": [
+        246,
+        246,
+        242
+      ],
+      "roof_colour": [
+        246,
+        246,
+        242
+      ],
+      "_note": "Norman St Cape Cod: white lattice arbour beside the driveway (reference photos)"
+    },
+    {
+      "name": "Hastings Rd deck",
+      "preset": "garage",
+      "lat": 45.799309,
+      "lon": -64.1367309,
+      "facing": 152.0,
+      "width": 4.2,
+      "depth": 2.6,
+      "height": 0.8,
+      "roof": "flat",
+      "colour": [
+        150,
+        118,
+        86
+      ],
+      "_note": "Hastings Rd house: front deck and steps (reference photos)"
     }
   ]
 }
