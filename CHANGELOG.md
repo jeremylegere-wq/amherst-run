@@ -9,6 +9,18 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+### Fixed
+- With real elevation on, buildings, roads and props behind a hill no longer show through it, and walls sunk into a
+  slope no longer show below the grass: a per-column hill horizon is worked out each frame and anything beyond a crest
+  is clipped at it (about 1 ms a frame, and nothing on flat ground).
+- Buildings on slopes sit on their highest corner, with the walls running down to the land on the downhill side,
+  instead of being buried on the uphill side.
+- Every building is off the roads: the map editor's fix-all now cuts driveways back to the building they run into and
+  trims a building back to the street edge when it cannot be slid clear (0 buildings on roads on the real map).
+- Stop signs, traffic-light poles and railway crossbucks no longer stand in the road at junctions (20 of 62 did):
+  they step out to the side or back along their road until they are clear.
+- The map editor dropped the `_note` lines (where a change came from) when it saved; they are kept now.
+
 ## [0.2.0] - 2026-11-17
 Amherst, measured and rebuilt: real building heights and roofs from LiDAR, house types with close-up detail, and the
 town's heritage buildings modelled from the Canadian Register of Historic Places and reference photos.
