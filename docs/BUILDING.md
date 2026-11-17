@@ -89,6 +89,9 @@ building with `"roof_colour"`.
 | `colour` | `[r, g, b]` wall colour, instead of a material |
 | `chimney` | Brick chimney on the ridge of a gable or hip roof: `true`, or where along the ridge from `-0.9` to `0.9` (0 = middle) |
 | `arch` (map_edits.json, for OpenStreetMap buildings) | House type for the close-up details: `garage`, `minihome`, `bungalow`, `cape`, `two_storey` or `apartment`, plus `+porch` for a front veranda (e.g. `"two_storey+porch"`). Without it the type is worked out from height, roof and zoning |
+| `tower` (map_edits.json) | `true` puts a clock tower with a cupola on the building (the old post office has it) |
+| `steeple` (map_edits.json, churches) | `spire` (default), `turret` (square castellated bell tower), `twin` (two towers with pointed caps) or `none` |
+| `storeys`, `shopfront` (map_edits.json) | Rows of windows for a downtown block, and `true` / `false` to force a shop front on its street side |
 | `label` | Name shown on the whole-town map (keep it generic, like the other landmarks) |
 | `replace_radius` | Metres. Removes the OpenStreetMap building(s) whose centre is that close (swap a real house for yours) |
 

@@ -84,7 +84,8 @@ STYLES = {
         "car_shadow": SHADOW_RGB, "ink": None, "ink_until_fog": 0, "windows": None,
         "house": {"foundation": (112, 110, 104), "trim": (196, 192, 180), "glass": (62, 78, 110),
                   "doors": [(110, 46, 40), (52, 64, 92), (70, 88, 66)], "garage_door": (176, 172, 160),
-                  "porch": (150, 128, 96), "porch_roof": (92, 90, 96)},
+                  "porch": (150, 128, 96), "porch_roof": (92, 90, 96),
+                  "signs": [(60, 70, 64), (90, 50, 44), (50, 60, 84), (120, 104, 70)]},
         "clouds": 0, "cast_shadows": None,
         "trunk": (96, 72, 52), "lamp": (70, 72, 84), "lamp_head": (220, 214, 170),
         "tree_cols": [((90, 130, 70), (64, 100, 56)), ((104, 140, 80), (72, 108, 60)), ((80, 120, 74), (58, 92, 58))],
@@ -111,7 +112,8 @@ STYLES = {
         "car_shadow": None, "ink": (22, 18, 40), "ink_until_fog": 4, "windows": (40, 60, 118),
         "house": {"foundation": (150, 146, 140), "trim": (250, 250, 244), "glass": (52, 84, 150),
                   "doors": [(196, 44, 48), (36, 70, 150), (40, 120, 84), (250, 250, 244)],
-                  "garage_door": (236, 234, 226), "porch": (204, 168, 118), "porch_roof": (72, 76, 92)},
+                  "garage_door": (236, 234, 226), "porch": (204, 168, 118), "porch_roof": (72, 76, 92),
+                  "signs": [(30, 96, 72), (150, 36, 44), (32, 60, 130), (214, 170, 52), (24, 24, 30)]},
         "clouds": 9, "cast_shadows": (24, 22, 72, 120),     # RGBA, drawn see-through
         "trunk": (124, 80, 46), "lamp": (64, 66, 96), "lamp_head": (255, 246, 190),
         "tree_cols": [((98, 206, 72), (44, 138, 66)), ((150, 216, 58), (72, 150, 52)), ((72, 192, 112), (34, 124, 88))],
@@ -180,6 +182,8 @@ def grade_rgb(rgb, grade):
     return (int(max(0, min(255, r))), int(max(0, min(255, g))), int(max(0, min(255, b))))
 
 
+SHOP_DETAIL = 70.0        # metres: shop fronts and upper-storey windows on downtown blocks inside this
+SHOP_ZONES = ("D", "U", "N")
 HOUSE_DETAIL = 45.0       # metres: doors, windows, foundations and porches on houses (game/archetypes.py) inside this
 PROP_DIST = 130.0         # trees and lamps further than this are not drawn
 DETAIL_DIST = 95.0        # signs, hydrants, benches and the like
@@ -473,6 +477,7 @@ class Renderer3D:
         self.buildings = {}
         self.extras = {}            # building index -> material / landmark details
         self._houses = {}           # building index -> house details (game/archetypes.py), worked out when first close
+        self._shops = {}            # building index -> walls with a shop front (set), worked out when first close
         for i, b in enumerate(self.world.buildings):
             self._prep_building(i, b)
 
@@ -482,6 +487,7 @@ class Renderer3D:
         self._bground.pop(i, None)
         self.extras.pop(i, None)
         self._houses.pop(i, None)
+        self._shops.pop(i, None)
         self.graffiti.pop(i, None)
         self._prep_building(i, self.world.buildings[i])
 
@@ -516,7 +522,8 @@ class Renderer3D:
         if b.get("material") or b.get("landmark") or roof:
             longest = max(walls, key=lambda w: math.hypot(w[2] - w[0], w[3] - w[1]))
             ex = {"material": b.get("material"), "landmark": b.get("landmark"),
-                  "tower": b.get("tower", False),
+                  "tower": b.get("tower", False), "steeple": b.get("steeple", "spire"),
+                  "storeys": b.get("storeys"), "shopfront": b.get("shopfront"), "zone": b.get("zone"),
                   "axis": math.atan2(longest[3] - longest[1], longest[2] - longest[0]),
                   "roof": None}
             faces = roof_faces(pts, height, roof, b.get("roof_height", 0.0), b.get("ridge_across", False)) if roof else []
@@ -1311,14 +1318,30 @@ class Renderer3D:
             self._houses[idx] = info
         return self._houses[idx]
 
+    def _shop_walls(self, idx):
+        """Walls of building idx that get a shop front: those right on a street (a road within 9 m), for downtown
+        commercial blocks (zones D, U, N without a landmark) or buildings marked "shopfront". Empty set otherwise."""
+        if idx not in self._shops:
+            ex = self.extras.get(idx)
+            walls = set()
+            downtown = ex and ex.get("material") in ("sandstone", "brick") and (
+                ex.get("zone") in SHOP_ZONES or ex.get("zone") is None)       # the converter's sandstone district has no zone
+            if ex and (ex.get("shopfront") or (ex.get("shopfront") is None and downtown and not ex.get("landmark"))):
+                for k, w in enumerate(self.buildings[idx][4]):
+                    if math.hypot(w[2] - w[0], w[3] - w[1]) >= 3.0 and archetypes.front_wall([w], self.world.on_road, 9.0, 1.5) == 0:
+                        walls.add(k)
+            self._shops[idx] = walls
+        return self._shops[idx]
+
     def _building_style(self, idx, b, dist):
         _cx, _cy, h, base, _walls, fp, _rad = b
         ex = self.extras.get(idx)
         landmark = ex["landmark"] if ex else None
         arched = landmark in ("courthouse", "civic", "church") and dist < 80.0
         house = self._house(idx) if dist < HOUSE_DETAIL and self.st.get("house") else None
+        shops = self._shop_walls(idx) if dist < SHOP_DETAIL and ex and self.st.get("house") else ()
         return {
-            "h": h, "base": base, "ex": ex, "landmark": landmark, "arched": arched, "house": house,
+            "h": h, "base": base, "ex": ex, "landmark": landmark, "arched": arched, "house": house, "shops": shops,
             "win": self.st["windows"] if dist < 90.0 and h > 3.5 and not arched and not house else None,
             "cornice": self.st["cornice"] if ex and ex["material"] in ("sandstone", "brick") and dist < 120.0 else None,
             "tags": self.graffiti.get(idx) if dist < 80.0 else None,
@@ -1339,7 +1362,9 @@ class Renderer3D:
         self._poly(surf, [(x0, y0, z0), (x1, y1, z1), (x1, y1, h), (x0, y0, h)], self.col(base, sh, fog), ink)
         if st["house"]:
             self._draw_house_wall(surf, idx, st["house"], wi, x0, y0, x1, y1, nx, ny, h, z0, z1, sh, fog, ink)
-        if st["win"]:
+        if wi in st["shops"]:
+            self._draw_shop_front(surf, idx, st["ex"], x0, y0, x1, y1, h, sh, fog, ink)
+        elif st["win"]:
             self._draw_windows(surf, x0, y0, x1, y1, h, self.col(st["win"], sh, fog))
         if st["arched"]:
             self._draw_arched_windows(surf, x0, y0, x1, y1, h, self.col(self.st["windows"] or (40, 60, 118), sh, fog), ink)
@@ -1401,6 +1426,44 @@ class Renderer3D:
         if front and house["porch"]:
             self._draw_porch(surf, x0, y0, ux, uy, nx, ny, L, fh, sh, fog, ink)
 
+    def _draw_shop_front(self, surf, idx, ex, x0, y0, x1, y1, h, sh, fog, ink):
+        """Downtown shop front: display windows between stone piers, a door, a sign band, and rows of upper windows
+        (one per storey: from "storeys" when set, else from the height)."""
+        hs = self.st["house"]
+        L = math.hypot(x1 - x0, y1 - y0)
+        ux, uy = (x1 - x0) / L, (y1 - y0) / L
+
+        def rect(u0, u1, za, zb, rgb):
+            self._poly(surf, [(x0 + ux * u0, y0 + uy * u0, za), (x0 + ux * u1, y0 + uy * u1, za),
+                              (x0 + ux * u1, y0 + uy * u1, zb), (x0 + ux * u0, y0 + uy * u0, zb)], rgb)
+        bays = max(1, int(L / 3.6))
+        bw = L / bays
+        glass, trim = self.col(hs["glass"], sh, fog), self.col(self.st["cornice"], sh, fog)
+        door_bay = (idx * 7) % bays
+        signs = hs.get("signs") or [(40, 70, 60)]
+        if h >= 4.2:
+            rect(0.15, L - 0.15, 3.0, 3.75, self.col(signs[idx % len(signs)], sh, fog))           # sign band
+        for k in range(bays):
+            a, b = k * bw + 0.35, (k + 1) * bw - 0.35
+            if k == door_bay:
+                m = (a + b) / 2
+                rect(a, m - 0.55, 0.5, 2.7, glass)
+                rect(m - 0.5, m + 0.5, 0.0, 2.6, self.col(hs["doors"][idx % len(hs["doors"])], sh, fog))
+                rect(m + 0.55, b, 0.5, 2.7, glass)
+            else:
+                rect(a, b, 0.5, 2.8, glass)
+        storeys = ex.get("storeys") or max(1, int((h + 0.6) / 3.8))
+        z = 4.3
+        n = max(1, int(L / 2.5))
+        for _row in range(storeys - 1):
+            if z + 1.7 > h - 0.4:
+                break
+            for k in range(n):
+                uc = L * (k + 0.5) / n
+                rect(uc - 0.6, uc + 0.6, z - 0.15, z + 1.85, trim)
+                rect(uc - 0.45, uc + 0.45, z, z + 1.7, glass)
+            z += 3.6
+
     def _draw_porch(self, surf, x0, y0, ux, uy, nx, ny, L, fh, sh, fog, ink):
         """A front veranda: a deck, three posts and a shed roof, 1.8 m deep along most of the front wall."""
         hs = self.st["house"]
@@ -1438,10 +1501,16 @@ class Renderer3D:
                 self._draw_chimney(surf, ex["chimney"], fog, ink)
         elif self.cz > h:
             self._poly(surf, [(p[0], p[1], h) for p in b[5]], self.col(base, 3, fog), ink)
-        if landmark == "courthouse" and ex["tower"]:
+        if ex and ex["tower"]:                                     # a central clock tower (the old post office)
             self._draw_clock_tower(surf, b, ex["axis"], base, fog, ink)
         elif landmark == "church":
-            self._draw_spire(surf, b, ex["axis"], base, fog, ink)
+            steeple = ex.get("steeple", "spire")
+            if steeple == "spire":
+                self._draw_spire(surf, b, ex["axis"], base, fog, ink)
+            elif steeple == "turret":
+                self._draw_turret(surf, b, ex["axis"], base, fog, ink)
+            elif steeple == "twin":
+                self._draw_twin_towers(surf, b, ex["axis"], base, fog, ink)
 
     def _draw_chimney(self, surf, ch, fog, ink):
         """A brick chimney standing on the ridge: the sides that face the camera, then the cap."""
@@ -1567,6 +1636,39 @@ class Renderer3D:
         self._draw_box(surf, fr, -1.8, 1.8, -1.8, 1.8, h - 0.5, h + 4.0, base, base, fog, ink)
         self._draw_frustum(surf, fr, (-1.9, 1.9, -1.9, 1.9), (-0.05, 0.05, -0.05, 0.05), h + 4.0, h + 15.0,
                            self.st["slate"], self.st["slate"], fog, ink)
+
+    def _end_frame(self, b, axis, inset):
+        """A frame at the far end of a building's long axis (where a church's tower stands)."""
+        cx, cy = b[0], b[1]
+        ax, ay = math.cos(axis), math.sin(axis)
+        far = max(((p[0] - cx) * ax + (p[1] - cy) * ay) for p in b[5])
+        return _Frame(cx + ax * max(0.0, far - inset), cy + ay * max(0.0, far - inset), axis), far
+
+    def _draw_turret(self, surf, b, axis, base, fog, ink):
+        """A square castellated bell tower at one corner of the church front (Trinity-St. Stephen's)."""
+        h, pts = b[2], b[5]
+        area = abs(sum(pts[k][0] * pts[k - 1][1] - pts[k - 1][0] * pts[k][1] for k in range(len(pts)))) / 2
+        s = max(2.3, min(4.2, math.sqrt(area) / 11.0))                  # half width: grows with the church
+        fr, _far = self._end_frame(b, axis, s + 0.2)
+        fr = _Frame(fr.x + fr.right[0] * s * 1.3, fr.y + fr.right[1] * s * 1.3, axis)
+        top = h + 2.6 * s
+        self._draw_box(surf, fr, -s, s, -s, s, h - 0.5, top, base, base, fog, ink)
+        m, q = s * 0.42, s * 0.2                                         # merlon size and gap
+        for a0, a1, b0, b1 in ((-s, -s + m, -s, -s + m), (s - m, s, -s, -s + m), (-s, -s + m, s - m, s), (s - m, s, s - m, s),
+                               (-q, q, -s, -s + m), (-q, q, s - m, s), (-s, -s + m, -q, q), (s - m, s, -q, q)):
+            self._draw_box(surf, fr, a0, a1, b0, b1, top, top + 0.5 * s, base, base, fog, ink)      # merlons
+
+    def _draw_twin_towers(self, surf, b, axis, base, fog, ink):
+        """Two tall towers with pointed caps either side of the church front (First Baptist)."""
+        h = b[2]
+        fr, _far = self._end_frame(b, axis, 1.8)
+        for side in (-1.0, 1.0):
+            off = side * 4.2
+            t = _Frame(fr.x + fr.right[0] * off, fr.y + fr.right[1] * off, axis)
+            top = h + (7.0 if side > 0 else 5.0)                                           # one taller, as most have
+            self._draw_box(surf, t, -1.6, 1.6, -1.6, 1.6, h - 0.5, top, base, base, fog, ink)
+            self._draw_frustum(surf, t, (-1.8, 1.8, -1.8, 1.8), (-0.05, 0.05, -0.05, 0.05), top, top + 5.5,
+                               self.st["slate"], self.st["slate"], fog, ink)
 
     def _draw_tag(self, surf, shapes, x0, y0, x1, y1, nx, ny, sh, fog, ink):
         L = math.hypot(x1 - x0, y1 - y0)

@@ -31,7 +31,7 @@ built from OpenStreetMap data.
   prints a report - fix the JSON when it says NOT FOUND or picks the wrong building. Jeremy knows the town:
   ask him before "correcting" a landmark.
 - In: red sandstone/brick downtown (380 m around the court house), Court House (45.83315, -64.21318, waymarking.com)
-  with an optional clock tower ("tower": true/false - the heritage register does not mention one), Dominion
+  (54 Victoria St E, 1888; NO tower - the clock tower is on the old post office, 50 Victoria St E), Dominion
   Building/post office, banks, churches with steeples, Victoria Square (lawn, paths, tree ring, World Wars
   Memorial cenotaph), County Museum, Armoury (battlements), Welcome Centre + lighthouse prop,
   wind turbines on the skyline (17 real turbines: 15 on the marsh ~3 km west, 2 east; thewindpower.net).
@@ -132,7 +132,7 @@ amherst-run/
 - [ ] Settings for resolution scale and palette
 
 ## Status (updated 15 Nov 2026)
-- Everything below is built and tested headless (395 tests, `python -m unittest discover -s tests`). Still needs hands-on
+- Everything below is built and tested headless (400 tests, `python -m unittest discover -s tests`). Still needs hands-on
   playtesting: handling, drift/boost feel, 4 player on Batocera, and the map editor with a real mouse.
 - Runs on: Windows/macOS/Linux laptop (development), Batocera (Xbox pads, pygame 2.5.2, Python 3.11), Android/Pydroid.
 - Frame cost (sandbox): ~2-3 ms render, ~17,500 props (about 15,000 trees). A basic laptop may be 2-4x slower.
@@ -206,6 +206,17 @@ amherst-run/
   (start house = "cape"). Renderer: details only within HOUSE_DETAIL = 45 m, worked out lazily per building
   (`Renderer3D._house`, front wall = first outward probe that hits world.on_road); colours in STYLES[...]["house"].
   Upright gable triangles now use the wall colour on all buildings. No measurable render cost (back-to-back, +-2 ms).
+- Heritage buildings (17 Nov 2026, Jeremy chose "public heritage records" as the reference): facts from the Canadian
+  Register of Historic Places (via the Wikipedia list of Cumberland County places), matched by street address through
+  data/addresses.json; stored in map_edits.json with a `_note` per building (register id in the note). Modelled: 109
+  Court House (tower False), 115 old post office "Old Post Office" (tower True: clock tower moved here), 110 Dominion
+  (light grey), 160 old Bank of Nova Scotia, 137 butcher shop 1897 (shopfront), 164 Trinity (steeple turret), 113 First
+  Baptist (twin, sandstone), 108 Christ Church = OSM "Amherst Anglican Church" (steeple none), 196 station (hip roof),
+  16 Armoury (OSM building=military; landmark entry fixed). NOT matched (ask Jeremy): 100 Victoria St E old Bank of
+  Montreal (corner LaPlanche), 96 Church St (Moffatt House, mansard), 233 Victoria St E, 30 Hickman St school, 177 Victoria
+  St E turret house and 27 / 46 Victoria St W houses (matched but not modelled: need turret/bay/veranda parts).
+  Renderer: `steeple` spire/turret/twin/none, `tower` on any building, shop fronts (SHOP_DETAIL 70 m) on street walls of
+  downtown sandstone/brick blocks (zone D/U/N or no zone) - `_shop_walls`. No measurable render cost (+-2 ms pairs).
 - Benchmarks drift with machine load (17 Nov: street downtown render ~32 ms vs ~17 ms on 15 Nov, same code): compare
   only back-to-back runs.
 - Painter's algorithm: scene objects must be sorted far-to-near (regression test exists). Walls are 12 m pieces;
@@ -225,7 +236,7 @@ amherst-run/
 6. Pedestrians (crossings, footpaths), parked cars along streets, road markings and signs from Mapillary (check licence first).
 7. DONE (15 Nov 2026): weather and time of day. Follow-ups: night, rain, fog starting closer (FOG_START is global).
 8. Sound and music (original chiptune), pause menu, save/load of cash and progress.
-Open questions for Jeremy: Armoury location (skipped for now); which of these matters most; where are the real downtown lights/stop signs (OSM has few); Armoury/Dominion Building landmark names; downtown re-download check.
+Open questions for Jeremy: which of these matters most; the unmatched heritage buildings listed in Status; where are the real downtown lights/stop signs (OSM has few); Armoury/Dominion Building landmark names; downtown re-download check.
 
 ## Notes for Claude
 - Prefer simple, readable code over clever code.

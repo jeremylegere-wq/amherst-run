@@ -197,6 +197,13 @@ and apartment block. Up close (45 m) each type gets a foundation, trimmed window
 street side, siding up into the gables with an attic window, and verandas; further away they keep the cheap look.
 Set a house's type by hand with `"arch"` in `data/map_edits.json` (see [docs/BUILDING.md](docs/BUILDING.md)).
 
+### Heritage buildings
+Downtown's registered heritage buildings are modelled from the facts in the Canadian Register of Historic Places
+(storeys, stone, roof, towers): the 1888 Court House, the old post office with its clock tower, the Dominion Building
+in light grey sandstone, the 1907 Bank of Nova Scotia, an 1897 sandstone shop, the railway station, the Armoury, and
+the churches (Trinity-St. Stephen's castellated bell tower, First Baptist's twin towers, Christ Church with no steeple).
+Downtown blocks get shop fronts with display windows, sign bands and upper-storey windows when you are close.
+
 ### Real house numbers
 `data/addresses.json` (included) has the Nova Scotia Civic Address File points for the map area. Parcel jobs use the real
 number nearest the drop point on the same street. Refresh it with `python tools/fetch_addresses.py`.

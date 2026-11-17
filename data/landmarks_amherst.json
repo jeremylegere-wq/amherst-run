@@ -27,8 +27,9 @@
    "search": 150,
    "material": "sandstone",
    "height": 12.5,
-   "tower": true,
-   "role": "courthouse"
+   "tower": false,
+   "role": "courthouse",
+   "_note": "54 Victoria St E, County Court House 1888. The heritage register lists no tower: the clock tower is on the old post office at 50 Victoria St E (set in map_edits.json)."
   },
   {
    "id": "dominion_building",
@@ -192,18 +193,17 @@
    "id": "armoury",
    "kind": "armoury",
    "label": "Armoury",
-   "names": [
-    "armoury",
-    "armory",
-    "drill hall"
-   ],
    "near": [
-    45.83315,
-    -64.21318
+    45.8341,
+    -64.20817
    ],
-   "search": 2500,
+   "search": 120,
    "fallback_nearest": false,
-   "material": "brick"
+   "material": "brick",
+   "tags": {
+    "building": "military"
+   },
+   "_note": "Armoury 1915, Canadian Register of Historic Places 9708 (towers face Acadia St)"
   },
   {
    "id": "welcome_centre",

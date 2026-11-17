@@ -15,6 +15,12 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
   `data/building_heights.json` under the hand edits and over the zoning guesses. `tools/cog.py` reads the province-wide
   cloud GeoTIFFs tile by tile with the standard library + numpy (no new dependency).
 - Roofs can run across a building (`ridge_across`), for cross-gabled houses.
+- Heritage buildings modelled from the Canadian Register of Historic Places (facts only): Court House (54 Victoria St E,
+  no tower), old post office (50 Victoria St E) with the clock tower, Dominion Building in light grey sandstone, Bank of
+  Nova Scotia (79), 1897 sandstone shop (91), railway station (hip roof), Armoury (finally found: building tagged
+  military by Acadia St), Trinity-St. Stephen's (castellated bell tower), First Baptist (twin towers, red sandstone),
+  Christ Church (no steeple). New building settings `tower`, `steeple`, `storeys`, `shopfront`.
+- Shop fronts on downtown blocks within 70 m: display windows between piers, a door, a sign band and upper-storey windows.
 - House types (`game/archetypes.py`): garage, mini-home, bungalow, cape, two-storey, apartment, picked from LiDAR height,
   roof pitch, footprint and zoning. Within 45 m houses get foundations, trimmed windows per storey, a front door on the
   street side, wall-coloured gable ends with attic windows and front verandas. `"arch"` in map_edits.json sets a type by
