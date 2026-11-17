@@ -12,6 +12,8 @@ cr (collision radius m), c (colour variant), and for lamps dx, dy (direction the
 import math
 import random
 
+import numpy as np
+
 from . import streetdetail
 from .world import point_in_polygon
 
@@ -21,6 +23,9 @@ MIN_GAP = 5.0             # no two props closer than this
 TREE_CLEAR = 2.2          # trees stay this far from any road edge (clear of the 1.8 m sidewalk)
 LAMP_CLEAR = 0.9
 MAX_PROPS = 17500
+WOODS_CELL_CAP = 8        # most streamed woods trees in one 40 m prop cell (~1 per 200 m2: a deep wood fills the
+                          # 130 m draw radius with ~300 trees, about what the renderer can afford)
+WOODS_CLEAR = 1.5         # woods trees keep this far from a road edge
 MONUMENTS = {"cenotaph": (6.0, 1.4), "lighthouse": (10.6, 1.6)}   # kind -> (height, radius)
 TREE_PROB = {"main": 0.6, "side": 0.7, "lane": 0.35}
 
@@ -51,7 +56,9 @@ class _Spacing:
         self.cells.setdefault((int(x // MIN_GAP), int(y // MIN_GAP)), []).append((x, y))
 
 
-def _site_ok(world, x, y, clear, radius):
+def _site_ok(world, x, y, clear, radius, water=None, rails=None):
+    """Can a prop of this footprint stand at (x, y)? `water` and `rails` narrow the lists searched (for a caller
+    that already knows which ones are near)."""
     if not world.in_bounds(x, y, margin=-2.0):
         return False
     if world.road_clearance(x, y) < clear:
@@ -59,11 +66,16 @@ def _site_ok(world, x, y, clear, radius):
     for ox, oy in ((0, 0), (radius, 0), (-radius, 0), (0, radius), (0, -radius)):
         if world.in_building(x + ox, y + oy):
             return False
-    for w in world.water:
+    return _clear_of(x, y, world.water if water is None else water, world.rails if rails is None else rails)
+
+
+def _clear_of(x, y, water, rails):
+    """True when (x, y) is not in any of the water polygons and more than 4 m from the rail lines."""
+    for w in water:
         x0, y0, x1, y1 = w["bbox"]
         if x0 - 2 <= x <= x1 + 2 and y0 - 2 <= y <= y1 + 2 and point_in_polygon(x, y, w["points"]):
             return False
-    for r in world.rails:
+    for r in rails:
         x0, y0, x1, y1 = r["bbox"]
         if x0 - 5 <= x <= x1 + 5 and y0 - 5 <= y <= y1 + 5:
             pts = r["points"]
@@ -147,13 +159,78 @@ def build_props(world, osm_props=(), seed=1, procedural=True):
                         props.append(_lamp(x, y, -nx, -ny))
                         spacing.add(x, y)
                     s += LAMP_SPACING
-    # real woods from the land cover data: trees fill the treed areas, after the street trees
-    if getattr(world, "woods", None):
-        from . import landcover
-        for x, y in landcover.sites(world.woods, rng, centre=world.spawn()[:2]):
-            if len(props) >= MAX_PROPS:
-                break
-            if spacing.free(x, y) and _site_ok(world, x, y, 1.5, 1.2):
-                props.append(_tree(rng, x, y))
-                spacing.add(x, y)
+    # the real woods (land cover) are not planted here: World streams them per cell (woods_cell below)
     return props[:MAX_PROPS]
+
+
+def _near(items, x0, y0, x1, y1, pad):
+    out = []
+    for it in items:
+        bx0, by0, bx1, by1 = it["bbox"]
+        if bx1 + pad >= x0 and bx0 - pad <= x1 and by1 + pad >= y0 and by0 - pad <= y1:
+            out.append(it)
+    return out
+
+
+def _tree_from_hash(h, x, y):
+    """A woods tree whose looks come from its site hash (as _tree does from an rng, without seeding one)."""
+    u = [((h >> s) & 0xFFFF) / 65536.0 for s in (0, 16, 32)]
+    return {"kind": "tree", "x": round(x, 2), "y": round(y, 2), "h": round(4.5 + 3.0 * u[0], 2),
+            "r": round(1.7 + 1.0 * u[1], 2), "cr": 0.4, "c": int(u[2] * 3)}
+
+
+def woods_cell(world, index, cx, cy, size, existing, seed=1):
+    """Trees for one prop-grid cell (cx, cy) of the world grid (`size` = game.world.CELL metres) from the woods
+    index (game.landcover.WoodsIndex). `existing(x, y)` is true when a prop already stands within MIN_GAP (hand
+    trees, street trees, lamps...). Applies the same checks as _site_ok, with the road and building tests done for
+    the whole cell at once. Deterministic: the same cell always gets the same trees, whatever was made before it."""
+    x0, y0 = cx * size, cy * size
+    sites = index.sites(x0, y0, size, seed)
+    if not sites:
+        return []
+    x1, y1 = x0 + size, y0 + size
+    px = np.array([s[0] for s in sites])
+    py = np.array([s[1] for s in sites])
+    bx0, by0, bx1, by1 = world.bounds
+    ok = (px >= bx0 + 2.0) & (px <= bx1 - 2.0) & (py >= by0 + 2.0) & (py <= by1 - 2.0)
+    segs = [sg for gx in (cx - 1, cx, cx + 1) for gy in (cy - 1, cy, cy + 1)
+            for sg in world._road_grid.get((gx, gy), ())]             # what road_clearance looks at in this cell
+    if segs:
+        ax, ay, bx, by, w = (np.array(c) for c in zip(*segs))
+        dx, dy = bx - ax, by - ay
+        L = dx * dx + dy * dy
+        L[L == 0] = 1e-12
+        t = np.clip(((px[:, None] - ax) * dx + (py[:, None] - ay) * dy) / L, 0.0, 1.0)
+        d = np.hypot(px[:, None] - (ax + t * dx), py[:, None] - (ay + t * dy)) - w / 2.0
+        ok &= d.min(axis=1) >= WOODS_CLEAR
+    if not ok.any():
+        return []
+    blds = set()
+    for gx in (cx - 1, cx, cx + 1):
+        for gy in (cy - 1, cy, cy + 1):
+            blds.update(world._bld_grid.get((gx, gy), ()))
+    boxes = [world.buildings[i]["bbox"] for i in blds]
+    boxes = [b for b in boxes if b[2] >= x0 - 1.2 and b[0] <= x1 + 1.2 and b[3] >= y0 - 1.2 and b[1] <= y1 + 1.2]
+    water = _near(world.water, x0, y0, x1, y1, 2.0)
+    if water:                                   # in the water? tested for the whole cell at once
+        from .landcover import inside_edges, ring_edges
+        cache = world.__dict__.setdefault("_water_edges", {})
+        for wt in water:
+            e = cache.get(id(wt))
+            if e is None:
+                e = cache[id(wt)] = ring_edges([wt["points"]])
+            ok &= ~inside_edges(e, px, py, y0, y1, x0)
+    rails = _near(world.rails, x0, y0, x1, y1, 5.0)
+    out = []
+    for (x, y, h), good in zip(sites, ok):
+        if not good or existing(x, y):
+            continue
+        if boxes and any(b[0] - 1.2 <= x <= b[2] + 1.2 and b[1] - 1.2 <= y <= b[3] + 1.2 for b in boxes):
+            if any(world.in_building(x + ox, y + oy) for ox, oy in ((0, 0), (1.2, 0), (-1.2, 0), (0, 1.2), (0, -1.2))):
+                continue
+        if rails and not _clear_of(x, y, (), rails):
+            continue
+        out.append(_tree_from_hash(h, x, y))
+        if len(out) >= WOODS_CELL_CAP:
+            break
+    return out

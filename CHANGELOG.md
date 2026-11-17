@@ -26,6 +26,14 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 - `tools/fetch_heights.py --only-new` measures just the buildings the heights file does not have yet.
 
 ### Changed
+- The real woods (NSTDB land cover) now grow everywhere on the map, not just near the start: their trees are made
+  per 40 m prop cell the first time the game looks there, instead of all at load. Before, the street trees used up
+  the whole prop budget, so the woods got almost no trees and the rural loop was bare grass. Every tree site comes
+  from a hash of its place on a global 8 m grid, thinned so no two stand within 5 m, so the same trees appear on every
+  visit whichever way you arrive. They keep clear of roads, buildings, water, rail, overpasses and every fixed prop
+  (hand trees included). At most 8 trees per cell. Cells next to the car are made at once (so you hit them); farther
+  ones are made one per frame, nearest first. The 3,000 most recent cells stay in memory; older ones are forgotten
+  and made again the same if you come back.
 - Land outside the town's zoning map counts as residential, so rural homes get house colours and roofs.
 - Low single-storey walls get (shorter) windows on the front instead of none, and doors stay below the eaves.
 

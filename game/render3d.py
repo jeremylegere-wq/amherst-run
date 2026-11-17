@@ -1150,7 +1150,7 @@ class Renderer3D:
             pr = self.project_poly([(x, y, gz) for x, y in hull])
             if pr:
                 pygame.draw.polygon(layer, rgba, pr[0])
-        for p in self.world.props_near(cx, cy, 100.0) if hasattr(self.world, "props_near") else ():
+        for p in self.world.props_near(cx, cy, 100.0, far=0) if hasattr(self.world, "props_near") else ():
             if p["kind"] in ("lamp", "car_block") or p["kind"] in DETAIL_KINDS or (p["x"] - cx) * fhx + (p["y"] - cy) * fhy < -10.0:
                 continue
             ox, oy, rr = p["x"] + sdx * p["h"] * 0.6, p["y"] + sdy * p["h"] * 0.6, p["r"] * 0.9

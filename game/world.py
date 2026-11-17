@@ -2,9 +2,12 @@
 import json
 import math
 import os
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 
 CELL = 40.0  # spatial grid cell size in metres
+WOODS_CELLS_KEPT = 3000   # streamed woods cells kept in memory; the oldest are dropped (and remade if seen again)
+WOODS_SYNC = 12.0         # props_near always makes the woods of cells this close to the point (so collision sees them)
+WOODS_PER_CALL = 1        # ...and at most this many farther cells per call, nearest first (spreads the cost over frames)
 
 
 def _bbox(points):
@@ -219,6 +222,13 @@ class World:
         self.parked = data.get("parked", [])                  # hand-placed parked cars (map_edits.json "cars")
         for p in parked_blocks(self.parked):                  # solid: three circles along each car
             self._prop_grid[(int(p["x"] // CELL), int(p["y"] // CELL))].append(p)
+        # the woods' trees are made per prop cell the first time props_near looks there (see _make_woods)
+        self._woods_index = None
+        self._woods_made = OrderedDict()                      # cell -> how many fixed props it had before its woods
+        self._woods_seed = self.meta.get("seed", 1)
+        if procedural and self.woods:
+            from .landcover import WoodsIndex
+            self._woods_index = WoodsIndex(self.woods)
 
     @classmethod
     def load(cls, path, custom="auto", zoning=True, terrain=True):
@@ -386,15 +396,80 @@ class World:
                         best = d
         return best
 
-    def props_near(self, x, y, r):
-        """Props within roughly r metres (square test) of a point."""
+    def props_near(self, x, y, r, far=WOODS_PER_CALL):
+        """Props within roughly r metres (square test) of a point. Woods trees in cells not seen before are made here:
+        all of those near the point, and `far` of the others (a second query in the same frame passes 0)."""
         out = []
-        for gx in range(int((x - r) // CELL), int((x + r) // CELL) + 1):
-            for gy in range(int((y - r) // CELL), int((y + r) // CELL) + 1):
+        gx0, gx1, gy0, gy1 = int((x - r) // CELL), int((x + r) // CELL), int((y - r) // CELL), int((y + r) // CELL)
+        if self._woods_index is not None:
+            self._stream_woods(x, y, gx0, gx1, gy0, gy1, far)
+        for gx in range(gx0, gx1 + 1):
+            for gy in range(gy0, gy1 + 1):
                 for p in self._prop_grid.get((gx, gy), ()):
                     if abs(p["x"] - x) <= r and abs(p["y"] - y) <= r:
                         out.append(p)
         return out
+
+    def _prop_within(self, x, y, gap):
+        """True when any prop already in the grid stands closer than `gap` to (x, y) (makes no woods)."""
+        g2 = gap * gap
+        for gx in range(int((x - gap) // CELL), int((x + gap) // CELL) + 1):
+            for gy in range(int((y - gap) // CELL), int((y + gap) // CELL) + 1):
+                for p in self._prop_grid.get((gx, gy), ()):
+                    if (p["x"] - x) ** 2 + (p["y"] - y) ** 2 < g2:
+                        return True
+        return False
+
+    def _stream_woods(self, x, y, gx0, gx1, gy0, gy1, n_far):
+        """Make the missing woods cells of this block: all those within WOODS_SYNC of (x, y), and n_far of the
+        others, nearest first. The rest wait for later calls (the renderer asks every frame)."""
+        made, far = self._woods_made, []
+        for gx in range(gx0, gx1 + 1):
+            for gy in range(gy0, gy1 + 1):
+                if (gx, gy) in made:
+                    continue
+                dx = max(gx * CELL - x, 0.0, x - (gx + 1) * CELL)
+                dy = max(gy * CELL - y, 0.0, y - (gy + 1) * CELL)
+                d = dx * dx + dy * dy
+                if d <= WOODS_SYNC * WOODS_SYNC:
+                    self._make_woods(gx, gy)
+                else:
+                    far.append((d, gx, gy))
+        if far and n_far > 0:
+            far.sort()
+            for _d, gx, gy in far[:n_far]:
+                self._make_woods(gx, gy)
+
+    def warm_woods(self, x, y, r):
+        """Make every woods cell within r of (x, y) now (a loading screen, a test, a benchmark)."""
+        for gx in range(int((x - r) // CELL), int((x + r) // CELL) + 1):
+            for gy in range(int((y - r) // CELL), int((y + r) // CELL) + 1):
+                if self._woods_index is not None and (gx, gy) not in self._woods_made:
+                    self._make_woods(gx, gy)
+
+    def _make_woods(self, gx, gy):
+        """Plant the woods trees of prop cell (gx, gy), after the fixed props already there."""
+        cell = self._prop_grid.get((gx, gy))
+        self._woods_made[(gx, gy)] = len(cell) if cell else 0
+        if len(self._woods_made) > WOODS_CELLS_KEPT:           # forget the oldest cell's trees; they come back the same
+            old, n = self._woods_made.popitem(last=False)
+            lst = self._prop_grid.get(old)
+            if lst:
+                del lst[n:]
+        x0, y0 = gx * CELL, gy * CELL
+        bx0, by0, bx1, by1 = self.bounds
+        if x0 > bx1 or y0 > by1 or x0 + CELL < bx0 or y0 + CELL < by0:
+            return
+        from .props import MIN_GAP, woods_cell
+        trees = woods_cell(self, self._woods_index, gx, gy, CELL, lambda x, y: self._prop_within(x, y, MIN_GAP),
+                           seed=self._woods_seed)
+        trees = [t for t in trees if not self._near_span(t["x"], t["y"], 4.0)]
+        if trees:
+            self._prop_grid[(gx, gy)].extend(trees)
+
+    def woods_trees_made(self):
+        """How many streamed woods trees are in memory now (for tests and benchmarks)."""
+        return sum(len(self._prop_grid.get(c, ())) - n for c, n in self._woods_made.items())
 
     def in_bounds(self, x, y, margin=0.0):
         x0, y0, x1, y1 = self.bounds
