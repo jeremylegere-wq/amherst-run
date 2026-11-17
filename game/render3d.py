@@ -21,6 +21,7 @@ import math
 import random
 from collections import defaultdict
 
+import numpy as np
 import pygame
 
 from . import config as C
@@ -182,6 +183,10 @@ def grade_rgb(rgb, grade):
     return (int(max(0, min(255, r))), int(max(0, min(255, g))), int(max(0, min(255, b))))
 
 
+OCC_COLS = 32             # hills hide what is behind them: a horizon line per screen column (10 px wide at 320)...
+OCC_START, OCC_STEP = 6.0, 5.0   # ...from land sampled every 5 m outwards
+OCC_SLACK = 0.3           # metres: land must rise this much above an object's line of sight to hide it
+OCC_MARGIN = 3.0          # land at least this much nearer than an object can hide it (so a wall sunk into a slope is cut)
 SHOP_DETAIL = 70.0        # metres: shop fronts and upper-storey windows on downtown blocks inside this
 SHOP_ZONES = ("D", "U", "N")
 HOUSE_DETAIL = 45.0       # metres: doors, windows, foundations and porches on houses (game/archetypes.py) inside this
@@ -378,6 +383,10 @@ class Renderer3D:
         self._layer = None
         self.terrain = getattr(world, "terrain", None)     # None = flat world
         self.gbase = 0.0                                   # ground height under the camera (set per frame)
+        self._occ = None                                   # per-frame hill horizon (see _compute_horizon)
+        self._occ_first = 0
+        t = self.terrain
+        self._tgrid = np.array(t.h, dtype=np.float32).reshape(t.ny, t.nx) if t is not None else None
         self._bground = {}                                 # building index -> (foundation z, skirt depth)
         self._prep_paint()
         self._prep_roads()
@@ -395,7 +404,8 @@ class Renderer3D:
         return t.height(x, y) if t is not None else 0.0
 
     def _building_ground(self, idx):
-        """(foundation height, slope drop): a building sits on its lowest corner; walls reach down to the land."""
+        """(foundation height, slope drop): a building sits on its HIGHEST corner and its walls reach down to the land, so on
+        a slope the downhill side gets a taller wall (a walk-out basement) instead of the uphill side being buried."""
         v = self._bground.get(idx)
         if v is None:
             if self.terrain is None:
@@ -403,7 +413,7 @@ class Renderer3D:
             else:
                 b = self.buildings[idx]
                 hs = [self._g(p[0], p[1]) for p in b[5]] + [self._g(b[0], b[1])]
-                v = (min(hs), max(hs) - min(hs) + 0.3)
+                v = (max(hs), max(hs) - min(hs) + 0.3)
             self._bground[idx] = v
         return v
 
@@ -743,6 +753,7 @@ class Renderer3D:
         self.gbase = self._g(self.cx, self.cy)
         self._draw_ground(surf, h0)
         self._draw_terrain(surf)
+        self._compute_horizon()
         self._draw_flat(surf)
         grounded = [c for c in cars if getattr(c, "z", 0.0) - self._g(c.x, c.y) < 0.5]     # no ground shadow under a car up on a deck
         if self.st["cast_shadows"]:
@@ -922,6 +933,57 @@ class Renderer3D:
         za, zb = z + g0, z + g1
         return [(ax + nx, ay + ny, za), (bx + nx, by + ny, zb), (bx - nx, by - ny, zb), (ax - nx, ay - ny, za)]
 
+    def _compute_horizon(self):
+        """Hills hide what is behind them (no depth buffer here: the land is painted first, so without this buildings
+        and roads beyond a crest show through it). For each of OCC_COLS screen columns, march outwards over the land
+        and keep, for every distance, the highest screen row the nearer land already reaches. Objects further away are
+        then clipped at that row (_occ_row). One vectorised pass per frame; nothing when the world is flat."""
+        if self._tgrid is None:
+            self._occ = None
+            return
+        t, g = self.terrain, self._tgrid
+        k = int((DRAW_DIST - OCC_START) / OCC_STEP) + 1
+        sx = (np.arange(OCC_COLS) + 0.5) * (W / OCC_COLS)
+        ang = self.yaw + np.arctan((sx - HW) / self.focal)
+        d = OCC_START + OCC_STEP * np.arange(k)
+        px = self.cx + np.cos(ang)[:, None] * d[None, :]
+        py = self.cy + np.sin(ang)[:, None] * d[None, :]
+        fx = np.clip((px - t.x0) / t.step, 0, t.nx - 1.001)
+        fy = np.clip((py - t.y0) / t.step, 0, t.ny - 1.001)
+        i, j = fx.astype(np.int32), fy.astype(np.int32)
+        tx, ty = fx - i, fy - j
+        top = g[j, i] + (g[j, i + 1] - g[j, i]) * tx
+        z = top + (g[j + 1, i] + (g[j + 1, i + 1] - g[j + 1, i]) * tx - top) * ty
+        dx, dy, dz = px - self.cx, py - self.cy, z - OCC_SLACK - self.cz       # small bumps do not hide things
+        zc = dx * self.fx + dy * self.fy + dz * self.fz
+        yc = dx * self.ux + dy * self.uy + dz * self.uz
+        rows = np.where(zc > NEAR, HH - self.focal * yc / np.maximum(zc, NEAR), float(H))
+        occ = np.minimum.accumulate(rows, axis=1)
+        # the first distance step at which land is hidden behind nearer land, in any column: nothing nearer than that
+        # can be behind a hill, so most objects skip the lookup (on flat or falling ground, all of them)
+        hidden = rows[:, 1:] > occ[:, :-1] + 1.0
+        first = np.where(hidden.any(axis=1), hidden.argmax(axis=1) + 1, k)
+        self._occ_first = int(first.min())
+        self._occ = occ.tolist()                                              # plain lists: fast single lookups
+
+    def _occ_row(self, x, y, z, dist):
+        """Screen row above which an object at (x, y, z) (absolute height) can be seen: H when no hill is in front of
+        it. `dist` is the distance to the object's NEAREST point (its near end), so the land under the object itself
+        never cuts it. Uses the column it projects into and its neighbours (the most generous of the three)."""
+        occ = self._occ
+        if occ is None:
+            return H
+        k = int((dist - OCC_START - OCC_MARGIN) / OCC_STEP)
+        if k < self._occ_first:
+            return H                                    # nearer than any crest
+        p = self.project(x, y, z)
+        if p is None:
+            return H
+        c = min(OCC_COLS - 1, max(0, int(p[0] * OCC_COLS / W)))
+        k = min(k, len(occ[0]) - 1)
+        row = max(occ[c - 1][k] if c else occ[c][k], occ[c][k], occ[c + 1][k] if c < OCC_COLS - 1 else occ[c][k])
+        return row if row < p[1] - 1.0 else H          # only a hill that rises above the object's foot hides anything
+
     def _draw_flat(self, surf):
         st = self.st
         # parks: lawn, and crossing paths in a town square
@@ -957,26 +1019,44 @@ class Renderer3D:
 
         # roads, lowest class first; kerbs/sidewalks then fills so junctions merge cleanly
         buckets = {k: [] for k in ROAD_ORDER}
+        behind = []                                            # pieces partly behind a hill: drawn clipped, last
         for pc in self._visible_pieces(self.road_grid):
+            if self._occ is not None:
+                mx, my = pc[14], pc[15]
+                near = min(math.hypot(pc[0] - self.cx, pc[1] - self.cy), math.hypot(pc[2] - self.cx, pc[3] - self.cy))
+                row = self._occ_row(mx, my, (pc[9] + pc[10]) / 2.0, near - pc[6])
+                if row <= 0:
+                    continue                                   # wholly behind a hill
+                if row < H:
+                    behind.append((row, pc))
+                    continue
             buckets[pc[7]].append(pc)
-        sw_col, sw_w = st["sidewalk"], st["sidewalk_w"]
         for cls in ROAD_ORDER:
-            pieces = buckets[cls]
-            for x0, y0, x1, y1, dx, dy, hw, _c, par, g0, g1, mk, sw, gv, mx, my in pieces:
-                edge = st["gravel"] if gv and sw == 0 else sw_col[sw]
-                self._poly_fog(surf, self._quad(x0, y0, x1, y1, dx, dy, hw + sw_w[sw], 0.01, g0=g0, g1=g1), edge, 3)
-            base = st["road"][cls]
-            for x0, y0, x1, y1, dx, dy, hw, _c, par, g0, g1, mk, sw, gv, mx, my in pieces:
-                self._poly_fog(surf, self._quad(x0, y0, x1, y1, dx, dy, hw, 0.02, g0=g0, g1=g1),
-                               st["gravel"] if gv else base, 3 if par else 2)
-            for x0, y0, x1, y1, dx, dy, hw, _c, par, g0, g1, mk, sw, gv, mx, my in pieces:
-                if mk:
-                    ddx, ddy = mx - self.cx, my - self.cy
-                    if ddx * ddx + ddy * ddy < PAINT_DIST * PAINT_DIST:
-                        self._draw_marking(surf, mk, x0, y0, x1, y1, dx, dy, hw, g0, g1, mx, my)
+            self._draw_road_pieces(surf, cls, buckets[cls])
+        for row, pc in behind:
+            surf.set_clip(pygame.Rect(0, 0, W, int(row) + 1))
+            self._draw_road_pieces(surf, pc[7], [pc])
+            surf.set_clip(None)
         # crosswalks and stop bars from the map's marks
         for pts, colour, _mx, _my in self._visible_pieces(self.paint_grid, 8.0):
             self._poly_fog(surf, pts, st["line"] if colour == "white" else st["line_yellow"], 3)
+
+    def _draw_road_pieces(self, surf, cls, pieces):
+        """Kerbs/sidewalks, then the surface, then paint, for road pieces of one class."""
+        st = self.st
+        sw_col, sw_w = st["sidewalk"], st["sidewalk_w"]
+        for x0, y0, x1, y1, dx, dy, hw, _c, par, g0, g1, mk, sw, gv, mx, my in pieces:
+            edge = st["gravel"] if gv and sw == 0 else sw_col[sw]
+            self._poly_fog(surf, self._quad(x0, y0, x1, y1, dx, dy, hw + sw_w[sw], 0.01, g0=g0, g1=g1), edge, 3)
+        base = st["road"][cls]
+        for x0, y0, x1, y1, dx, dy, hw, _c, par, g0, g1, mk, sw, gv, mx, my in pieces:
+            self._poly_fog(surf, self._quad(x0, y0, x1, y1, dx, dy, hw, 0.02, g0=g0, g1=g1),
+                           st["gravel"] if gv else base, 3 if par else 2)
+        for x0, y0, x1, y1, dx, dy, hw, _c, par, g0, g1, mk, sw, gv, mx, my in pieces:
+            if mk:
+                ddx, ddy = mx - self.cx, my - self.cy
+                if ddx * ddx + ddy * ddy < PAINT_DIST * PAINT_DIST:
+                    self._draw_marking(surf, mk, x0, y0, x1, y1, dx, dy, hw, g0, g1, mx, my)
 
     def _draw_marking(self, surf, mk, x0, y0, x1, y1, dx, dy, hw, g0, g1, mx, my):
         """Paint on one road piece: solid lines are full length, dashes are 3 m long, two per 20 m piece."""
@@ -1114,42 +1194,75 @@ class Renderer3D:
         self._fix_wall_order(objs)                        # cars/props hugging a wall: put them on the right side of it
         objs.sort(key=lambda o: o[0], reverse=True)       # painter's algorithm: far to near
         flat = self.terrain is None
+        occ = self._occ is not None
         for dist, kind, obj in objs:
-            if kind == 0:
-                g = 0.0 if flat else self._building_ground(obj[0])[0]
-                self.cz -= g                    # everything on the ground is drawn as if the ground were at z=0
-                self._draw_wall_piece(surf, obj, dist)
-                self.cz += g
-            elif kind == 5:
-                g = 0.0 if flat else self._building_ground(obj)[0]
-                self.cz -= g
-                self._draw_building_top(surf, obj, dist)
-                self.cz += g
-            elif kind == 2:
-                g = 0.0 if flat else self._g(obj["x"], obj["y"])
-                self.cz -= g
-                self._draw_prop(surf, obj, dist)
-                self.cz += g
-            elif kind == 3:
-                g = 0.0 if flat else self._g(obj["x"], obj["y"])
-                self.cz -= g
-                self._draw_marker(surf, obj, dist)
-                self.cz += g
-            elif kind == 6:
-                g = 0.0 if flat else self._g(obj.x, obj.y)
-                self.cz -= g
-                self._draw_train_unit(surf, obj, self.fog_band(dist))
-                self.cz += g
-            elif kind == 4:
-                self._draw_deck_piece(surf, obj, dist - 11.0)
-            else:
-                z = getattr(obj, "z", 0.0)
-                if z > 0.01:                    # raised car: same as lowering the camera by z
-                    self.cz -= z
-                    self._draw_car(surf, obj, 0 if obj is car else self.fog_band(dist))
-                    self.cz += z
+            if occ and kind != 4:                                  # behind a hill? clip at the hill's horizon line
+                if kind == 0:
+                    ox, oy = (obj[2] + obj[4]) / 2.0, (obj[3] + obj[5]) / 2.0
+                    near = min(math.hypot(obj[2] - self.cx, obj[3] - self.cy), math.hypot(obj[4] - self.cx, obj[5] - self.cy))
+                    oz = self._building_ground(obj[0])[0] - self._building_ground(obj[0])[1]
+                elif kind == 5:
+                    ox, oy = self.buildings[obj][0], self.buildings[obj][1]
+                    near = math.hypot(ox - self.cx, oy - self.cy) - self.buildings[obj][6]
+                    oz = self._building_ground(obj)[0]
+                elif kind in (2, 3):
+                    ox, oy = obj["x"], obj["y"]
+                    near = dist - 1.5
+                    oz = None
                 else:
-                    self._draw_car(surf, obj, 0 if obj is car else self.fog_band(dist))
+                    ox, oy = obj.x, obj.y
+                    near = dist - 2.5
+                    oz = getattr(obj, "z", None)
+                if (near - OCC_START - OCC_MARGIN) / OCC_STEP < self._occ_first:
+                    self._draw_object(surf, car, dist, kind, obj, flat)        # nearer than any crest
+                    continue
+                row = self._occ_row(ox, oy, self._g(ox, oy) if oz is None else oz, near)
+                if row <= 0:
+                    continue
+                if row < H:
+                    surf.set_clip(pygame.Rect(0, 0, W, int(row) + 1))
+                    self._draw_object(surf, car, dist, kind, obj, flat)
+                    surf.set_clip(None)
+                    continue
+            self._draw_object(surf, car, dist, kind, obj, flat)
+
+    def _draw_object(self, surf, car, dist, kind, obj, flat):
+        """Draw one scene object (wall piece, building top, prop, marker, train unit, deck piece or car)."""
+        if kind == 0:
+            g = 0.0 if flat else self._building_ground(obj[0])[0]
+            self.cz -= g                    # everything on the ground is drawn as if the ground were at z=0
+            self._draw_wall_piece(surf, obj, dist)
+            self.cz += g
+        elif kind == 5:
+            g = 0.0 if flat else self._building_ground(obj)[0]
+            self.cz -= g
+            self._draw_building_top(surf, obj, dist)
+            self.cz += g
+        elif kind == 2:
+            g = 0.0 if flat else self._g(obj["x"], obj["y"])
+            self.cz -= g
+            self._draw_prop(surf, obj, dist)
+            self.cz += g
+        elif kind == 3:
+            g = 0.0 if flat else self._g(obj["x"], obj["y"])
+            self.cz -= g
+            self._draw_marker(surf, obj, dist)
+            self.cz += g
+        elif kind == 6:
+            g = 0.0 if flat else self._g(obj.x, obj.y)
+            self.cz -= g
+            self._draw_train_unit(surf, obj, self.fog_band(dist))
+            self.cz += g
+        elif kind == 4:
+            self._draw_deck_piece(surf, obj, dist - 11.0)
+        else:
+            z = getattr(obj, "z", 0.0)
+            if z > 0.01:                    # raised car: same as lowering the camera by z
+                self.cz -= z
+                self._draw_car(surf, obj, 0 if obj is car else self.fog_band(dist))
+                self.cz += z
+            else:
+                self._draw_car(surf, obj, 0 if obj is car else self.fog_band(dist))
 
     def _wall(self, surf, a, b, z0, z1, out, base, fog, ink):
         """A vertical quad from point a to b (x, y, base heights ha, hb) between offsets z0..z1, if it faces the camera.

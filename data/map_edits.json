@@ -4,6 +4,21 @@
   "delete": [],
   "replace": [
    {
+    "material": "brick",
+    "colour": [
+     152,
+     72,
+     58
+    ],
+    "landmark": "armoury",
+    "label": "Armoury",
+    "at": [
+     794.52,
+     -914.65
+    ],
+    "_note": "Armoury 1915 (Canadian Register of Historic Places): limestone entry block with two towers, brick drill hall with gambrel roof (drawn as gable)"
+   },
+   {
     "points": [
      [
       1346.95,
@@ -220,6 +235,95 @@
     ]
    },
    {
+    "steeple": "none",
+    "at": [
+     324.39,
+     -867.11
+    ],
+    "_note": "60 Victoria St E, Christ Church (Anglican) 1846 (Canadian Register of Historic Places): red brick, cross plan, no steeple"
+   },
+   {
+    "tower": false,
+    "storeys": 2,
+    "at": [
+     353.07,
+     -815.13
+    ],
+    "_note": "54 Victoria St E, County Court House 1888 (Canadian Register of Historic Places): sandstone, 2.5 storeys, Romanesque arched windows, no tower"
+   },
+   {
+    "material": "sandstone",
+    "colour": [
+     198,
+     192,
+     178
+    ],
+    "landmark": "civic",
+    "label": "Dominion Building",
+    "role": "deliveries",
+    "storeys": 2,
+    "at": [
+     407.54,
+     -922.69
+    ],
+    "_note": "98 Victoria St E, Dominion Public Building 1934-36 (Canadian Register of Historic Places): light grey sandstone front, two storeys"
+   },
+   {
+    "material": "sandstone",
+    "colour": [
+     172,
+     80,
+     62
+    ],
+    "steeple": "twin",
+    "at": [
+     382.06,
+     -892.49
+    ],
+    "_note": "66 Victoria St E, First Baptist 1895 (Canadian Register of Historic Places): red sandstone, two tall turreted towers"
+   },
+   {
+    "height": 10.5,
+    "colour": [
+     168,
+     96,
+     82
+    ],
+    "landmark": "civic",
+    "label": "Old Post Office",
+    "tower": true,
+    "storeys": 2,
+    "at": [
+     347.16,
+     -785.07
+    ],
+    "_note": "50 Victoria St E, old post office and customs 1884-86 (Canadian Register of Historic Places): red and grey sandstone, 2.5 storeys, Gothic windows, central clock tower with cupola"
+   },
+   {
+    "points": [
+     [
+      419.3,
+      -825.0
+     ],
+     [
+      399.41,
+      -834.9
+     ],
+     [
+      395.04,
+      -824.67
+     ],
+     [
+      413.3,
+      -812.99
+     ]
+    ],
+    "at": [
+     406.2,
+     -823.92
+    ]
+   },
+   {
     "points": [
      [
       475.43,
@@ -242,6 +346,21 @@
      463.02,
      -730.45
     ]
+   },
+   {
+    "material": "sandstone",
+    "colour": [
+     178,
+     90,
+     70
+    ],
+    "storeys": 2,
+    "shopfront": true,
+    "at": [
+     437.73,
+     -896.48
+    ],
+    "_note": "91 Victoria St E, butcher shop 1897 (Canadian Register of Historic Places): red sandstone, two storeys, arched upper windows"
    },
    {
     "points": [
@@ -274,6 +393,93 @@
    {
     "points": [
      [
+      489.6,
+      -743.0
+     ],
+     [
+      467.67,
+      -757.36
+     ],
+     [
+      456.8,
+      -738.85
+     ],
+     [
+      479.9,
+      -726.2
+     ]
+    ],
+    "at": [
+     473.07,
+     -741.6
+    ]
+   },
+   {
+    "points": [
+     [
+      541.15,
+      -1102.23
+     ],
+     [
+      525.8,
+      -1087.8
+     ],
+     [
+      535.3,
+      -1077.8
+     ],
+     [
+      533.2,
+      -1075.9
+     ],
+     [
+      573.1,
+      -1033.8
+     ],
+     [
+      588.81,
+      -1048.68
+     ]
+    ],
+    "at": [
+     550.32,
+     -1071.75
+    ]
+   },
+   {
+    "role": "",
+    "at": [
+     308.04,
+     -716.16
+    ]
+   },
+   {
+    "material": "sandstone",
+    "colour": [
+     180,
+     86,
+     64
+    ],
+    "landmark": "civic",
+    "label": "Bank",
+    "storeys": 1,
+    "at": [
+     431.35,
+     -868.65
+    ],
+    "_note": "79 Victoria St E, old Bank of Nova Scotia 1907 (Canadian Register of Historic Places): smooth red sandstone, one tall storey, round windows"
+   },
+   {
+    "steeple": "turret",
+    "at": [
+     570.59,
+     -932.02
+    ],
+    "_note": "1 Ratchford St, Trinity-St. Stephen's United 1906 (Canadian Register of Historic Places): red sandstone, square castellated bell tower"
+   },
+   {
+    "points": [
+     [
       403.29,
       -512.13
      ],
@@ -290,25 +496,24 @@
       -519.13
      ]
     ],
-    "at": [
-     420.55,
-     -498.93
-    ],
-    "landmark": "civic",
-    "label": "Station",
-    "material": "sandstone",
+    "height": 5.0,
     "colour": [
      172,
      84,
      66
     ],
-    "height": 5.0,
     "roof": "hip",
     "roof_height": 4.2,
     "roof_colour": [
      70,
      74,
      90
+    ],
+    "landmark": "civic",
+    "label": "Station",
+    "at": [
+     420.55,
+     -498.93
     ],
     "_note": "Station St, railway station 1907-08 (Canadian Register of Historic Places): rock-faced red sandstone, 1.5 storeys, steep hipped roof"
    },
@@ -583,6 +788,34 @@
    {
     "points": [
      [
+      -20.3,
+      -967.5
+     ],
+     [
+      -59.9,
+      -995.9
+     ],
+     [
+      -49.9,
+      -1009.8
+     ],
+     [
+      -36.14,
+      -999.96
+     ],
+     [
+      -11.89,
+      -979.28
+     ]
+    ],
+    "at": [
+     -35.1,
+     -988.67
+    ]
+   },
+   {
+    "points": [
+     [
       1367.48,
       -985.97
      ],
@@ -655,6 +888,46 @@
    {
     "points": [
      [
+      917.86,
+      -1320.01
+     ],
+     [
+      909.18,
+      -1332.33
+     ],
+     [
+      918.99,
+      -1339.25
+     ],
+     [
+      927.67,
+      -1326.93
+     ]
+    ],
+    "height": 6.7,
+    "colour": [
+     238,
+     238,
+     232
+    ],
+    "roof": "hip",
+    "roof_height": 3.6,
+    "roof_colour": [
+     70,
+     74,
+     84
+    ],
+    "arch": "two_storey+wrap",
+    "dormers": 1,
+    "at": [
+     919.85,
+     -1330.49
+    ],
+    "_note": "177 Victoria St E, 1907 (Canadian Register of Historic Places + from reference photos): white shingles, wrap-around veranda, stone turret and round bays; outline simplified to its bounding rectangle so it can take the hipped roof"
+   },
+   {
+    "points": [
+     [
       721.46,
       -121.5
      ],
@@ -722,6 +995,30 @@
     "at": [
      706.88,
      -121.4
+    ]
+   },
+   {
+    "points": [
+     [
+      541.0,
+      -439.8
+     ],
+     [
+      515.5,
+      -468.2
+     ],
+     [
+      525.51,
+      -477.27
+     ],
+     [
+      550.84,
+      -448.63
+     ]
+    ],
+    "at": [
+     533.58,
+     -458.8
     ]
    },
    {
@@ -821,6 +1118,30 @@
     ]
    },
    {
+    "height": 6.6,
+    "material": "clapboard",
+    "colour": [
+     178,
+     200,
+     226
+    ],
+    "roof": "gable",
+    "roof_height": 3.2,
+    "roof_colour": [
+     150,
+     152,
+     158
+    ],
+    "chimney": 0.55,
+    "ridge_across": true,
+    "arch": "two_storey",
+    "at": [
+     1585.25,
+     -1702.1
+    ],
+    "_note": "233 Victoria St E main house c.1845 (Canadian Register of Historic Places + reference photos): two-storey Classical Revival, light blue clapboard, gable end to the street, corner pilasters; the wing and garage wing are custom buildings"
+   },
+   {
     "points": [
      [
       2242.84,
@@ -843,6 +1164,28 @@
      2247.85,
      -1445.3
     ]
+   },
+   {
+    "height": 4.4,
+    "colour": [
+     178,
+     200,
+     230
+    ],
+    "roof": "gable",
+    "roof_height": 3.6,
+    "roof_colour": [
+     72,
+     76,
+     88
+    ],
+    "chimney": 0.4,
+    "arch": "cape",
+    "at": [
+     1562.2,
+     -1210.45
+    ],
+    "_note": "start house: 1.5-storey Cape, light blue siding, steep shingle gable, brick chimney"
    },
    {
     "points": [
@@ -1126,6 +1469,34 @@
     "at": [
      1868.75,
      -1011.71
+    ]
+   },
+   {
+    "points": [
+     [
+      1587.5,
+      2388.0
+     ],
+     [
+      1581.39,
+      2389.77
+     ],
+     [
+      1581.33,
+      2385.7
+     ],
+     [
+      1581.9,
+      2386.0
+     ],
+     [
+      1589.8,
+      2383.9
+     ]
+    ],
+    "at": [
+     1582.12,
+     2386.65
     ]
    },
    {
@@ -1503,6 +1874,38 @@
    {
     "points": [
      [
+      -2004.47,
+      1174.62
+     ],
+     [
+      -1966.9,
+      1148.0
+     ],
+     [
+      -1959.2,
+      1158.9
+     ],
+     [
+      -1980.4,
+      1173.9
+     ],
+     [
+      -1984.0,
+      1168.9
+     ],
+     [
+      -2000.55,
+      1180.65
+     ]
+    ],
+    "at": [
+     -1983.3,
+     1168.0
+    ]
+   },
+   {
+    "points": [
+     [
       1365.28,
       1273.91
      ],
@@ -1522,6 +1925,30 @@
     "at": [
      1390.65,
      1263.42
+    ]
+   },
+   {
+    "points": [
+     [
+      -133.5,
+      1648.3
+     ],
+     [
+      -112.4,
+      1676.5
+     ],
+     [
+      -73.85,
+      1650.23
+     ],
+     [
+      -117.78,
+      1636.87
+     ]
+    ],
+    "at": [
+     -94.38,
+     1642.3
     ]
    },
    {
@@ -1578,6 +2005,30 @@
     "at": [
      1288.8,
      1087.9
+    ]
+   },
+   {
+    "points": [
+     [
+      484.7,
+      -798.3
+     ],
+     [
+      490.7,
+      -794.6
+     ],
+     [
+      479.4,
+      -775.8
+     ],
+     [
+      473.47,
+      -780.25
+     ]
+    ],
+    "at": [
+     481.32,
+     -787.75
     ]
    },
    {
@@ -2403,231 +2854,109 @@
      1492.1,
      1886.88
     ]
-   },
-   {
-    "at": [
-     407.54,
-     -922.69
-    ],
-    "landmark": "civic",
-    "label": "Dominion Building",
-    "role": "deliveries",
-    "material": "sandstone",
-    "colour": [
-     198,
-     192,
-     178
-    ],
-    "storeys": 2,
-    "_note": "98 Victoria St E, Dominion Public Building 1934-36 (Canadian Register of Historic Places): light grey sandstone front, two storeys"
-   },
-   {
-    "at": [
-     308.04,
-     -716.16
-    ],
-    "role": ""
-   },
-   {
-    "at": [
-     1562.2,
-     -1210.45
-    ],
-    "colour": [
-     178,
-     200,
-     230
-    ],
-    "height": 4.4,
-    "roof": "gable",
-    "roof_height": 3.6,
-    "roof_colour": [
-     72,
-     76,
-     88
-    ],
-    "chimney": 0.4,
-    "_note": "start house: 1.5-storey Cape, light blue siding, steep shingle gable, brick chimney",
-    "arch": "cape"
-   },
-   {
-    "at": [
-     353.07,
-     -815.13
-    ],
-    "tower": false,
-    "storeys": 2,
-    "_note": "54 Victoria St E, County Court House 1888 (Canadian Register of Historic Places): sandstone, 2.5 storeys, Romanesque arched windows, no tower"
-   },
-   {
-    "at": [
-     347.16,
-     -785.07
-    ],
-    "landmark": "civic",
-    "label": "Old Post Office",
-    "material": "sandstone",
-    "colour": [
-     168,
-     96,
-     82
-    ],
-    "tower": true,
-    "height": 10.5,
-    "storeys": 2,
-    "_note": "50 Victoria St E, old post office and customs 1884-86 (Canadian Register of Historic Places): red and grey sandstone, 2.5 storeys, Gothic windows, central clock tower with cupola"
-   },
-   {
-    "at": [
-     431.35,
-     -868.65
-    ],
-    "landmark": "civic",
-    "label": "Bank",
-    "material": "sandstone",
-    "colour": [
-     180,
-     86,
-     64
-    ],
-    "storeys": 1,
-    "_note": "79 Victoria St E, old Bank of Nova Scotia 1907 (Canadian Register of Historic Places): smooth red sandstone, one tall storey, round windows"
-   },
-   {
-    "at": [
-     437.73,
-     -896.48
-    ],
-    "material": "sandstone",
-    "colour": [
-     178,
-     90,
-     70
-    ],
-    "storeys": 2,
-    "shopfront": true,
-    "_note": "91 Victoria St E, butcher shop 1897 (Canadian Register of Historic Places): red sandstone, two storeys, arched upper windows"
-   },
-   {
-    "at": [
-     570.59,
-     -932.02
-    ],
-    "steeple": "turret",
-    "_note": "1 Ratchford St, Trinity-St. Stephen's United 1906 (Canadian Register of Historic Places): red sandstone, square castellated bell tower"
-   },
-   {
-    "at": [
-     382.06,
-     -892.49
-    ],
-    "steeple": "twin",
-    "_note": "66 Victoria St E, First Baptist 1895 (Canadian Register of Historic Places): red sandstone, two tall turreted towers",
-    "material": "sandstone",
-    "colour": [
-     172,
-     80,
-     62
-    ]
-   },
-   {
-    "at": [
-     324.39,
-     -867.11
-    ],
-    "steeple": "none",
-    "_note": "60 Victoria St E, Christ Church (Anglican) 1846 (Canadian Register of Historic Places): red brick, cross plan, no steeple"
-   },
-   {
-    "at": [
-     794.52,
-     -914.65
-    ],
-    "landmark": "armoury",
-    "label": "Armoury",
-    "material": "brick",
-    "colour": [
-     152,
-     72,
-     58
-    ],
-    "_note": "Armoury 1915 (Canadian Register of Historic Places): limestone entry block with two towers, brick drill hall with gambrel roof (drawn as gable)"
-   },
-   {
-    "at": [
-     919.85,
-     -1330.49
-    ],
-    "colour": [
-     238,
-     238,
-     232
-    ],
-    "height": 6.7,
-    "arch": "two_storey+wrap",
-    "_note": "177 Victoria St E, 1907 (Canadian Register of Historic Places + from reference photos): white shingles, wrap-around veranda, stone turret and round bays; outline simplified to its bounding rectangle so it can take the hipped roof",
-    "points": [
-     [
-      917.86,
-      -1320.01
-     ],
-     [
-      909.18,
-      -1332.33
-     ],
-     [
-      918.99,
-      -1339.25
-     ],
-     [
-      927.67,
-      -1326.93
-     ]
-    ],
-    "roof": "hip",
-    "roof_height": 3.6,
-    "roof_colour": [
-     70,
-     74,
-     84
-    ],
-    "dormers": 1
-   },
-   {
-    "at": [
-     1585.25,
-     -1702.1
-    ],
-    "colour": [
-     178,
-     200,
-     226
-    ],
-    "height": 6.6,
-    "roof": "gable",
-    "roof_height": 3.2,
-    "roof_colour": [
-     150,
-     152,
-     158
-    ],
-    "chimney": 0.55,
-    "arch": "two_storey",
-    "material": "clapboard",
-    "ridge_across": true,
-    "_note": "233 Victoria St E main house c.1845 (Canadian Register of Historic Places + reference photos): two-storey Classical Revival, light blue clapboard, gable end to the street, corner pilasters; the wing and garage wing are custom buildings"
    }
   ]
  },
  "roads": {
   "delete": [],
-  "replace": [],
+  "replace": [
+   {
+    "points": [
+     [
+      -71.49,
+      1648.54
+     ],
+     [
+      -65.7,
+      1650.3
+     ],
+     [
+      -48.3,
+      1651.0
+     ],
+     [
+      -28.5,
+      1649.4
+     ],
+     [
+      -13.1,
+      1646.4
+     ],
+     [
+      7.4,
+      1626.2
+     ],
+     [
+      6.5,
+      1613.9
+     ],
+     [
+      4.2,
+      1606.9
+     ],
+     [
+      -0.5,
+      1600.3
+     ]
+    ],
+    "at": [
+     -84.95,
+     1641.22
+    ]
+   },
+   {
+    "points": [
+     [
+      -1962.6,
+      1243.1
+     ],
+     [
+      -2002.53,
+      1181.82
+     ]
+    ],
+    "at": [
+     -1986.86,
+     1205.86
+    ]
+   },
+   {
+    "points": [
+     [
+      1557.6,
+      2371.9
+     ],
+     [
+      1566.8,
+      2373.3
+     ],
+     [
+      1575.7,
+      2376.5
+     ],
+     [
+      1579.0,
+      2383.1
+     ],
+     [
+      1579.02,
+      2384.65
+     ]
+    ],
+    "at": [
+     1579.06,
+     2387.0
+    ]
+   }
+  ],
   "add": [
    {
     "type": "lane",
-    "service": "driveway",
     "width": 3.6,
     "name": "",
+    "speed": 50,
+    "rc": "LO",
+    "service": "driveway",
     "points": [
      [
       1568.91,

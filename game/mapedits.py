@@ -182,6 +182,8 @@ def apply(data, doc, mark=False):
         for k in BUILDING_FIELDS:
             if k in rep:
                 blds[i][k] = rep[k]
+        if rep.get("_note"):
+            blds[i]["_note"] = rep["_note"]               # kept so the map editor writes it back
         if "roof" in rep and "ridge_across" not in rep:
             blds[i].pop("ridge_across", None)            # a hand-set roof replaces the measured one completely
         blds[i]["edited"] = True
@@ -201,6 +203,8 @@ def apply(data, doc, mark=False):
         if "points" in rep:
             roads[i]["points"] = [list(p) for p in rep["points"]]
             rkeys[i] = _rkey(roads[i])
+        if rep.get("_note"):
+            roads[i]["_note"] = rep["_note"]
         for k in ROAD_FIELDS:
             if k in rep:
                 roads[i][k] = rep[k]
@@ -418,3 +422,91 @@ def push_clear(index, i, max_move=14.0):
         return 0.0, True
     b["points"] = [[round(p[0], 2), round(p[1], 2)] for p in pts]
     return moved, still
+
+
+# ------------------------------------------------------------------ fallbacks when a building cannot be pushed clear
+def poly_area(pts):
+    return abs(sum(pts[k][0] * pts[k - 1][1] - pts[k - 1][0] * pts[k][1] for k in range(len(pts)))) / 2.0
+
+
+def _clip_halfplane(pts, ax, ay, nx, ny, off):
+    """Sutherland-Hodgman: the part of polygon pts where (p - a) . n >= off."""
+    out = []
+    n = len(pts)
+    for k in range(n):
+        p, q = pts[k], pts[(k + 1) % n]
+        dp = (p[0] - ax) * nx + (p[1] - ay) * ny - off
+        dq = (q[0] - ax) * nx + (q[1] - ay) * ny - off
+        if dp >= 0:
+            out.append([p[0], p[1]])
+        if (dp >= 0) != (dq >= 0):
+            t = dp / (dp - dq)
+            out.append([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t])
+    return out
+
+
+def trim_clear(index, i, margin=0.3, keep_share=0.35):
+    """Cut building i back to the edge of the roads it pokes into (when it cannot be slid clear without hitting a
+    neighbour). Only ever shrinks the building. Returns True if it is now clear and keeps at least `keep_share` of
+    its floor area; otherwise leaves it unchanged and returns False."""
+    b = index.buildings[i]
+    pts = [list(p) for p in b["points"]]
+    area0 = poly_area(pts)
+    for _ in range(4):
+        worst = None
+        for j in index.roads_near(pts):
+            depth, x, y = index.intrusion(pts, j)
+            if depth > MIN_OVERLAP and (worst is None or depth > worst[0]):
+                worst = (depth, x, y, j)
+        if worst is None:
+            break
+        _d, x, y, j = worst
+        road = index.roads[j]
+        rp = road["points"]
+        seg = min(zip(rp, rp[1:]), key=lambda s: seg_dist(x, y, s[0][0], s[0][1], s[1][0], s[1][1]))
+        (ax, ay), (bx, by) = seg
+        L = math.hypot(bx - ax, by - ay) or 1.0
+        nx, ny = -(by - ay) / L, (bx - ax) / L
+        side = sum((p[0] - ax) * nx + (p[1] - ay) * ny for p in pts)       # keep the side most of the building is on
+        if side < 0:
+            nx, ny = -nx, -ny
+        pts = _clip_halfplane(pts, ax, ay, nx, ny, road.get("width", 6.0) / 2.0 + margin)
+        if len(pts) < 3:
+            return False
+    if poly_area(pts) < keep_share * area0 or any(index.intrusion(pts, j)[0] > MIN_OVERLAP for j in index.roads_near(pts)):
+        return False
+    b["points"] = [[round(p[0], 2), round(p[1], 2)] for p in pts]
+    return True
+
+
+def cut_road_outside(points, polys, step=0.5, min_len=3.0):
+    """A road (driveway) polyline with the parts inside any of the footprints `polys` removed: the longest piece left,
+    or None if nothing of at least `min_len` metres remains (then the driveway should go)."""
+    pieces, cur = [], []
+    for (ax, ay), (bx, by) in zip(points, points[1:]):
+        L = math.hypot(bx - ax, by - ay)
+        n = max(1, int(L / step))
+        for k in range(n + 1):
+            t = k / n
+            x, y = ax + (bx - ax) * t, ay + (by - ay) * t
+            if any(inside(x, y, P) and edge_dist(x, y, P) > 0.2 for P in polys):
+                if len(cur) > 1:
+                    pieces.append(cur)
+                cur = []
+            elif not cur or (x, y) != tuple(cur[-1]):
+                cur.append([x, y])
+    if len(cur) > 1:
+        pieces.append(cur)
+    if not pieces:
+        return None
+    best = max(pieces, key=lambda c: sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(c, c[1:])))
+    if sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(best, best[1:])) < min_len:
+        return None
+    keep = [best[0]] + [p for k, p in enumerate(best[1:-1], 1)
+                        if abs((p[0] - best[k - 1][0]) * (best[k + 1][1] - p[1]) - (p[1] - best[k - 1][1]) * (best[k + 1][0] - p[0])) > 1e-6] + [best[-1]]
+    return [[round(p[0], 2), round(p[1], 2)] for p in keep]
+
+
+def swallowed(small, big):
+    """True if footprint `small` lies wholly inside `big` (a leftover duplicate)."""
+    return poly_area(small) < poly_area(big) and all(inside(x, y, big) or edge_dist(x, y, big) < 0.3 for x, y in small)

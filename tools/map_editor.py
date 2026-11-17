@@ -310,18 +310,56 @@ class Editor:
         if not targets:
             self.message = "Select a building to fix (or select nothing to fix all)"
             return
-        fixed = stuck = 0
+        fixed = stuck = trimmed = cut = 0
         for i in targets:
             ref = ("b", i)
             self.push_undo(ref)
             moved, still = M.push_clear(self.index, i)
             if moved > 0 and not still:
                 fixed += 1
+                self.touch(ref)
+                continue
+            self.undo.pop()
+            # cannot slide it clear: cut back the driveways/lanes that run into it, then trim it to the street edge
+            pts = self.blds[i]["points"]
+            for j in self.index.roads_near(pts):
+                road = self.roads[j]
+                if road.get("type") != "lane" or self.index.intrusion(pts, j)[0] <= M.MIN_OVERLAP:
+                    continue
+                self.push_undo(("r", j))
+                new = M.cut_road_outside(road["points"], [pts])
+                if new is None:
+                    road["_deleted"] = True
+                else:
+                    road["points"] = new
+                self.index._along.pop(j, None)
+                self.touch(("r", j))
+                cut += 1
+            if not any(self.index.intrusion(pts, j)[0] > M.MIN_OVERLAP for j in self.index.roads_near(pts)):
+                fixed += 1
+                continue
+            self.push_undo(ref)
+            if M.trim_clear(self.index, i):
+                trimmed += 1
+                fixed += 1
             else:
                 stuck += 1
                 self.undo.pop()
             self.touch(ref)
-        self.message = "Fixed %d, could not fix %d (move or delete by hand)" % (fixed, stuck)
+        gone = 0
+        if self.sel is None:                                 # fix all: drop buildings that sit wholly inside another
+            for p in self.problems:
+                if p["kind"] == "building":
+                    a, b = self.blds[p["building"]], self.blds[p["other"]]
+                    for small, big in ((a, b), (b, a)):
+                        if not small.get("_deleted") and M.swallowed(small["points"], big["points"]):
+                            k = p["building"] if small is a else p["other"]
+                            self.push_undo(("b", k))
+                            small["_deleted"] = True
+                            gone += 1
+                            break
+        self.message = "Fixed %d (%d trimmed to the street edge, %d driveways cut back), removed %d duplicate(s), " \
+                       "could not fix %d" % (fixed, trimmed, cut, gone, stuck)
         self.recheck()
 
     # ------------------------------------------------------------------ adding
@@ -398,6 +436,8 @@ class Editor:
                     rep[k] = b[k]
             if rep:
                 rep["at"] = [round(b["_ok"][0], 2), round(b["_ok"][1], 2)]
+                if b.get("_note"):
+                    rep["_note"] = b["_note"]                  # where the change came from (register, photos...)
                 doc["buildings"]["replace"].append(rep)
         for r in self.roads:
             if r.get("_new"):
@@ -418,6 +458,8 @@ class Editor:
                     rep[k] = r[k]
             if rep:
                 rep["at"] = [round(r["_ok"][0], 2), round(r["_ok"][1], 2)]
+                if r.get("_note"):
+                    rep["_note"] = r["_note"]
                 doc["roads"]["replace"].append(rep)
         try:
             M.save(self.edits_path, doc)

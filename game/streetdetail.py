@@ -190,6 +190,31 @@ def _stop_line(road, a, node, colour="white"):
     return bar, sign, (-a[0], -a[1])
 
 
+def _off_road(world, x, y, out, back, clear=0.6):
+    """A spot for a sign pole that is not on any road: (x, y) itself if it is clear, else stepped further out to the
+    side (`out`, up to 6 m), else slid back along its own road (`back`, up to 10 m) and out. None if nowhere fits.
+    Junctions with wide or skewed crossing roads used to put poles in the middle of the other road."""
+    on = getattr(world, "on_road", None)
+    if on is None:
+        return x, y
+
+    def free(px, py):
+        return not on(px, py) and not any(on(px + ox, py + oy) for ox, oy in ((clear, 0), (-clear, 0), (0, clear), (0, -clear)))
+    if free(x, y):
+        return x, y
+    for k in range(1, 13):
+        px, py = x + out[0] * 0.5 * k, y + out[1] * 0.5 * k
+        if free(px, py):
+            return px, py
+    for kb in range(1, 21):
+        for ko in (0, 2, 4, 6, 8):
+            px = x + back[0] * 0.5 * kb + out[0] * 0.5 * ko
+            py = y + back[1] * 0.5 * kb + out[1] * 0.5 * ko
+            if free(px, py):
+                return px, py
+    return None
+
+
 def mark_details(world):
     """(paint polygons, props) made from world.marks."""
     paint, props = [], []
@@ -214,6 +239,9 @@ def mark_details(world):
             for i, (r, a, _q) in enumerate(_approaches(world, x, y)):
                 bar, sign, face = _stop_line(r, a, (x, y))
                 paint.append(bar)
+                sign = _off_road(world, sign[0], sign[1], (-a[1], a[0]), (-a[0], -a[1]))
+                if sign is None:
+                    continue                                   # the stop bar is painted; no room for a pole
                 if kind == "stop":
                     props.append(_prop("stopsign", sign[0], sign[1], 2.4, 0.45, 0.15, face[0], face[1]))
                 else:
@@ -228,7 +256,9 @@ def mark_details(world):
             for a in (direction, (-direction[0], -direction[1])):
                 rx, ry = -a[1], a[0]
                 px, py = q[0] - a[0] * 7.0 + rx * (hw + 1.3), q[1] - a[1] * 7.0 + ry * (hw + 1.3)
-                props.append(_prop("crossbuck", px, py, 2.7, 0.7, 0.15, -a[0], -a[1]))
+                spot = _off_road(world, px, py, (rx, ry), (-a[0], -a[1]))
+                if spot is not None:
+                    props.append(_prop("crossbuck", spot[0], spot[1], 2.7, 0.7, 0.15, -a[0], -a[1]))
         elif kind in ("hydrant", "bench", "bin"):
             props.append(_prop(kind, x, y, *_SIZE[kind]))
         elif kind == "bus_stop":

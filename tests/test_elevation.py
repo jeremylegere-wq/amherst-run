@@ -132,12 +132,12 @@ class HillRender(unittest.TestCase):
             r, surf = self.frame(world(slope_terrain(0.1), [BUILDING]), style)
             self.assertGreater(r.polys, 10)
 
-    def test_building_sits_on_lowest_corner_with_foot_on_the_land(self):
+    def test_building_sits_on_highest_corner_with_walls_down_to_the_land(self):
         w = world(slope_terrain(0.1, 1.0), [BUILDING])
         r, _ = self.frame(w)
         g, _drop = r._building_ground(0)
-        self.assertAlmostEqual(g, 4.0, places=3)                # west wall at x=40 -> 4 m
-        self.assertGreater(r._building_ground(0)[1], 1.5)       # east wall is 2 m higher up the slope
+        self.assertAlmostEqual(g, 6.0, places=3)                # east wall at x=60 -> 6 m: nothing is buried
+        self.assertGreater(r._building_ground(0)[1], 1.5)       # the west wall reaches 2 m further down the slope
 
     def test_camera_stays_above_ground(self):
         w = world(slope_terrain(0.4))                           # steep: camera behind the car is downhill, never under
