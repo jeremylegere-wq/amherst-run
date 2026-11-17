@@ -181,6 +181,87 @@
       "lat": 45.8380119,
       "lon": -64.20623,
       "facing": 303.4
+    },
+    {
+      "name": "Old Bank of Montreal",
+      "preset": "sandstone_block",
+      "width": 11.0,
+      "depth": 15.0,
+      "height": 7.6,
+      "material": "sandstone",
+      "colour": [
+        164,
+        76,
+        60
+      ],
+      "landmark": "civic",
+      "label": "Bank",
+      "storeys": 1,
+      "plinth": [
+        128,
+        60,
+        48
+      ],
+      "_note": "100 Victoria St E, Bank of Montreal 1906 (Canadian Register of Historic Places + from reference photos): rough red sandstone, one tall storey, arched windows, pediment. Demolished: placed approximately where the heritage register puts it (not in today's LiDAR or OSM)",
+      "lat": 45.8343709,
+      "lon": -64.2125698,
+      "facing": 112.1
+    },
+    {
+      "name": "Hickman St school",
+      "preset": "apartments",
+      "width": 44.0,
+      "depth": 17.0,
+      "height": 10.0,
+      "roof": "hip",
+      "roof_height": 4.6,
+      "roof_colour": [
+        62,
+        64,
+        72
+      ],
+      "material": "brick",
+      "colour": [
+        150,
+        66,
+        52
+      ],
+      "landmark": "civic",
+      "label": "School",
+      "storeys": 3,
+      "plinth": [
+        236,
+        234,
+        228
+      ],
+      "_note": "30 Hickman St school c.1911 (Canadian Register of Historic Places + from reference photos): red brick, white base, hipped roof, arched centre. Demolished: placed approximately where the heritage register puts it (not in today's LiDAR or OSM)",
+      "lat": 45.8234851,
+      "lon": -64.2148282,
+      "facing": 234.5
+    },
+    {
+      "name": "Hickman St school - centre",
+      "preset": "sandstone_block",
+      "width": 12.0,
+      "depth": 2.0,
+      "height": 11.5,
+      "roof": "flat",
+      "material": "brick",
+      "colour": [
+        150,
+        66,
+        52
+      ],
+      "landmark": "civic",
+      "plinth": [
+        236,
+        234,
+        228
+      ],
+      "_note": "broad central projection with the arched entrance (from reference photos). Demolished: placed approximately where the heritage register puts it (not in today's LiDAR or OSM)",
+      "lat": 45.8234355,
+      "lon": -64.2149281,
+      "facing": 234.5
     }
   ]
 }

@@ -223,11 +223,10 @@ amherst-run/
   Moffatt House 96 Church St = custom (not in OSM; mansard, 3 dormers, bay, two_storey+porch); 177 Victoria St E =
   OSM 927 with its 8-corner outline replaced by its bounding rectangle (map edit "points") for a hip roof + dormer,
   arch two_storey+wrap, + custom 8-sided stone "turret" (cone) at the NW corner and "round bay" on the west side.
-  PENDING (models in custom_buildings history, not placed): Old Bank of Montreal (100 Victoria St E) - LiDAR shows bare
-  ground where it was first put (between the Dominion Building and LaPlanche St); OSM 116 (NW corner, civic 102) is the
-  only roofed candidate. Hickman St school (30 Hickman St) - not in OSM, and no 44 m building in the 2020 LiDAR near the
-  register point. Ask Jeremy where both stand. Check placements against LiDAR with a height map (scratch tool hmap.py
-  idea: DSM-DTM around the point, OSM outlines shifted 3 m south) before trusting register coordinates.
+  DEMOLISHED heritage buildings (Jeremy: torn down, place approximately): Old Bank of Montreal (100 Victoria St E) in the
+  gap between the Dominion Building and LaPlanche St (bare ground in 2020 LiDAR - consistent with demolition), and the
+  Hickman St school (30 Hickman St) on its lot 10 m back from Hickman St at the register point. Both custom buildings,
+  notes say "Demolished: placed approximately". Landmarks (any `landmark`) never get graffiti.
 - Benchmarks drift with machine load (17 Nov: street downtown render ~32 ms vs ~17 ms on 15 Nov, same code): compare
   only back-to-back runs.
 - Painter's algorithm: scene objects must be sorted far-to-near (regression test exists). Walls are 12 m pieces;

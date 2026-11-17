@@ -247,9 +247,9 @@ def default_height(b, i, area):
 
 
 def graffiti_ok(b, area):
-    """Tags go on downtown and commercial walls, not on family homes."""
+    """Tags go on downtown and commercial walls, not on family homes or landmarks (heritage and civic buildings)."""
     kind = b.get("tags", {}).get("building", "")
-    if b.get("landmark") in ("church", "courthouse", "heritage_house"):
+    if b.get("landmark"):
         return False
     if b.get("material"):
         return True
