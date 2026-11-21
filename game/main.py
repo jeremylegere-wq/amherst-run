@@ -871,6 +871,23 @@ def default_map():
     sys.exit("No map found. Run: python tools/make_sample_map.py data/sample_map.json")
 
 
+def start_on_road(world, x, y):
+    """(x, y, heading) on the centre of the drivable road nearest (x, y), facing along it (--start)."""
+    best = None
+    for r in world.roads:
+        if r.get("service") in ("driveway", "track") or r.get("lift"):
+            continue
+        for a, b in zip(r["points"], r["points"][1:]):
+            dx, dy = b[0] - a[0], b[1] - a[1]
+            L2 = dx * dx + dy * dy
+            t = 0.0 if L2 == 0 else max(0.0, min(1.0, ((x - a[0]) * dx + (y - a[1]) * dy) / L2))
+            px, py = a[0] + dx * t, a[1] + dy * t
+            d = math.hypot(x - px, y - py)
+            if best is None or d < best[0]:
+                best = (d, px, py, math.atan2(dy, dx))
+    return (x, y, 0.0) if best is None else best[1:]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", action="version", version="Amherst Run " + __version__)
@@ -896,6 +913,8 @@ def main():
     ap.add_argument("--seed", type=int, default=1, help="random seed for traffic and police")
     ap.add_argument("--style", choices=("street", "retro"), default="street",
                     help="street = cel-shaded with ink outlines (default), retro = chunky flat shading with banded fog")
+    ap.add_argument("--start", default=None, metavar="X,Y",
+                    help="start on the nearest road to this map point (metres; for playtesting a spot)")
     ap.add_argument("--no-joy", action="store_true", help="ignore all gamepads/joysticks")
     ap.add_argument("--debug-input", action="store_true", help="show input state on screen")
     ap.add_argument("--touch", action="store_true", help="show on-screen touch controls (automatic on Android)")
@@ -903,6 +922,9 @@ def main():
     on_android = "ANDROID_ARGUMENT" in os.environ or "ANDROID_ROOT" in os.environ
 
     world = World.load(args.map or default_map(), zoning=not args.no_zoning, terrain=not args.flat)
+    if args.start:
+        x, y = (float(v) for v in args.start.split(","))
+        world.meta["spawn"] = list(start_on_road(world, x, y))
     game = Game(world, args.scale, deterministic=args.frames is not None, traffic=args.traffic,
                 seed=args.seed, style=args.style, weather=args.weather, cops=not args.no_cops, trains=not args.no_train,
                 touch=args.touch or on_android, no_joy=args.no_joy, debug_input=args.debug_input)

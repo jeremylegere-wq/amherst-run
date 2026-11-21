@@ -144,5 +144,15 @@ class Turnarounds(unittest.TestCase):
         self.assertIsNotNone(g.shortest_path(a, b))            # you can drive out and come back
 
 
+class StartOption(unittest.TestCase):
+    def test_start_snaps_to_the_nearest_road(self):
+        from game.main import start_on_road
+        from game.world import World
+        w = World({"meta": {"bounds": [-300, -300, 300, 300], "procedural_props": False}, "buildings": [],
+                   "roads": [{"type": "side", "width": 7, "points": [[-200, 50], [200, 50]]}]})
+        x, y, h = start_on_road(w, 10.0, 40.0)
+        self.assertAlmostEqual((x, y, h), (10.0, 50.0, 0.0))
+
+
 if __name__ == "__main__":
     unittest.main()

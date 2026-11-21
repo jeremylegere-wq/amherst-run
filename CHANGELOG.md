@@ -18,6 +18,7 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
   incoming one, so traffic and you can head back the other way.
 - `tools/road_check.py` drives a probe along every road and reports anything that stops a car, sudden steps and very
   steep grades.
+- `--start X,Y` starts the game on the road nearest a map point (metres), for playtesting a spot.
 
 ### Changed
 - Roads are graded into the LiDAR ground at load (`game/grading.py`): narrow dips (stream gullies, ditches) are filled,
