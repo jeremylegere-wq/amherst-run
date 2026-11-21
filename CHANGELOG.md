@@ -9,8 +9,9 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
-## [0.3.0] - 2026-11-21
+## [0.3.1] - 2026-11-21
 Two player battle and VS race modes, the country roads east of town, and more of Amherst's real places.
+(Version 0.3.0 was tagged but never released: its release checks failed on a flaky test, fixed here.)
 
 ### Added
 - Open parking lots: 73 surface lots from OpenStreetMap (`tools/fetch_parking.py` -> `data/parking.json`, 23.8 ha)
@@ -76,9 +77,14 @@ Two player battle and VS race modes, the country roads east of town, and more of
 - Low single-storey walls get (shorter) windows on the front instead of none, and doors stay below the eaves.
 
 ### Fixed
+- A battle test could fail depending on where the random start put the two cars (a building between them); the
+  battle tests now use a fixed seed and a clear straight road.
 - Hand-placed trees kept their position but got random sizes; they keep the `h` and `r` you give them now.
 - Clapboard houses (including the hand-modelled ones) could get graffiti tags.
 - A door in the middle of a long wall could vanish where the wall is cut into pieces for drawing.
+
+## [0.3.0] - 2026-11-21
+Tagged but not released: the release checks failed on a flaky battle test. Everything is in 0.3.1.
 
 ## [0.2.1] - 2026-11-17
 Fixes for hills, roads and street signs.
@@ -239,7 +245,8 @@ First public release.
 - The sandstone-corner bank entry in the landmark file matched every bank; it now matches by name only.
 - Buildings no longer draw through one another or through cars: each wall piece is depth-sorted on its own.
 
-[Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.2.1...v0.3.1
 [0.3.0]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.1.0...v0.2.0
