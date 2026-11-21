@@ -63,6 +63,7 @@ def street(x, y, heading_deg, traffic=26, seed=3, style="street", weather="clear
     """Chase-camera frame of the player's car at (x, y), with traffic (and police when heat > 0)."""
     car = player_car(0, x, y, math.radians(heading_deg))
     car.z = WORLD.ground(x, y)
+    WORLD.warm_woods(x, y, 150.0)                            # streamed trees in view, as in the game
     town = Town(WORLD, seed=seed, traffic=traffic, cops=heat > 0)
     if heat:
         town.add_heat(heat)
@@ -95,6 +96,7 @@ def look_at(tx, ty, bearing, back, up, look_z=4.5, t=12.0):
     b = math.radians(bearing)
     cx, cy = tx + math.sin(b) * back, ty - math.cos(b) * back
     gz = WORLD.ground(tx, ty)
+    WORLD.warm_woods(cx, cy, 150.0)
     cam = types.SimpleNamespace(x=cx, y=cy, z=gz + up, yaw=math.atan2(ty - cy, tx - cx), pitch=math.atan2(up - look_z, back))
     car = player_car(0, cx, cy, cam.yaw)
     car.z = -100.0

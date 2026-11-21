@@ -98,6 +98,8 @@ class TwoPlayer:
     def _spawn(self, i):
         """Start grid: two players side by side; with 3-4 players two rows (the second row 7 m behind)."""
         x, y, h = self.game.world.spawn()
+        if hasattr(self.game.world, "warm_woods"):
+            self.game.world.warm_woods(x, y, 140.0)          # the trees in view are there from the first frame
         rx, ry = -math.sin(h), math.cos(h)
         if self.n == 2:
             side, back = (-2.6, 2.6)[i], 0.0

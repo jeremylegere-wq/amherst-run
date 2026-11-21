@@ -331,3 +331,57 @@ class LidarGroundTests(unittest.TestCase):
         self.assertAlmostEqual(lidar.height(100, 100), 10.0, places=4)   # the embankment is gone under the road
         self.assertAlmostEqual(lidar.height(150, 100), 10.0, places=4)   # far away: untouched
         self.assertEqual(lidar.h[100 // 10 * 21 + 13], 10.0)
+
+
+class LidarTreeTests(unittest.TestCase):
+    def doc(self, xs, ys, hs, covered=True):
+        import fetch_lidar_trees as FLT
+        import base64
+        import zlib
+        cover = np.ones((4, 4), dtype=np.uint8) if covered else np.zeros((4, 4), dtype=np.uint8)
+        return {"unit_xy": FLT.UNIT_XY, "unit_h": FLT.UNIT_H, "count": len(xs),
+                "x": FLT.pack(np.round(np.array(xs) / FLT.UNIT_XY)), "y": FLT.pack(np.round(np.array(ys) / FLT.UNIT_XY)),
+                "h": FLT.pack(np.round(np.array(hs) / FLT.UNIT_H)),
+                "cover": {"x0": -320.0, "y0": -320.0, "cell": 160.0, "nx": 4, "ny": 4,
+                          "bits": base64.b64encode(zlib.compress(cover.tobytes())).decode()}}
+
+    def test_tops_are_peaks_not_roof_ridges(self):
+        import fetch_lidar_trees as FLT
+        chm = np.zeros((9, 9))
+        chm[2, 2], chm[1:4, 1:4] = 0.0, chm[1:4, 1:4]
+        yy, xx = np.mgrid[0:9, 0:9]
+        chm += np.clip(9.0 - 3.0 * np.hypot(yy - 2, xx - 2), 0, None)   # a crown peaking at (2, 2)
+        chm[6, 1:8] = 7.0                                                  # a level roof ridge along row 6
+        chm[5, 1:8] = chm[7, 1:8] = 5.0
+        r, k = FLT.tops(chm)
+        self.assertEqual(list(zip(r.tolist(), k.tolist())), [(2, 2)])
+
+    def test_cells_lookup_and_coverage(self):
+        from game.lidar_trees import LidarTrees
+        t = LidarTrees(self.doc([5.0, 45.0, 12.0], [5.0, 5.0, 30.0], [10.0, 20.0, 6.0]), 40.0)
+        self.assertEqual(len(t), 3)
+        cell = t.in_cell(0, 0)
+        self.assertEqual([round(h) for _x, _y, h in cell], [10, 6])          # tallest first, only this cell
+        self.assertTrue(t.covered(0.0, 0.0))
+        self.assertFalse(t.covered(5000.0, 0.0))
+        self.assertFalse(LidarTrees(self.doc([5.0], [5.0], [9.0], covered=False), 40.0).covered(0.0, 0.0))
+
+    def test_real_trees_replace_random_ones_and_keep_off_roads_and_houses(self):
+        import make_sample_map
+        from game.world import World
+        data = make_sample_map.build()
+        data["roads"] = [{"type": "side", "width": 8, "name": "Elm St", "points": [[-300, 0], [300, 0]]}]
+        data["buildings"] = [{"points": [[20, 20], [30, 20], [30, 30], [20, 30]], "tags": {"building": "house"}}]
+        data["woods"] = []
+        data["props"] = []                                                 # no mapped trees (the sample has a ring of them)
+        data["lidar_trees"] = self.doc([5.0, 25.0, 50.0, 70.0], [1.0, 25.0, 60.0, 90.0], [8.0, 9.0, 15.0, 30.0])
+        w = World(data)
+        w.warm_woods(40.0, 50.0, 120.0)
+        trees = [(p["x"], p["y"], p["h"]) for p in w.props_near(40.0, 50.0, 120.0) if p["kind"] == "tree"]
+        spots = {(round(x), round(y)) for x, y, _h in trees}
+        self.assertIn((50, 60), spots)                                     # a real tree in the yard
+        self.assertNotIn((5, 1), spots)                                    # on the road
+        self.assertNotIn((25, 25), spots)                                  # on the house
+        tall = [h for x, y, h in trees if (round(x), round(y)) == (70, 90)]
+        self.assertTrue(tall and tall[0] <= 24.0)                          # capped
+        self.assertFalse([1 for x, y, h in trees if (round(x), round(y)) not in {(50, 60), (70, 90)}])   # no random ones

@@ -33,6 +33,7 @@ from .touch import TouchControls
 from .town import Town
 from .train import Train
 from .battle import Battle
+WARM_RADIUS = 140.0     # metres around a start point whose streamed trees are planted before the first frame
 from .twoplayer import TwoPlayer
 from .world import World
 
@@ -126,6 +127,8 @@ class Game:
         x, y, h = self.world.spawn()
         car = player_car(0, x, y, h)
         car.z = self.world.ground(x, y)
+        if hasattr(self.world, "warm_woods"):
+            self.world.warm_woods(x, y, WARM_RADIUS)          # plant the trees in view now, not one area a frame
         return car
 
     def _respawn(self):

@@ -22,6 +22,12 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
   survey includes the bridge embankments while the game builds its own ramps and decks. `tools/cog.py` can now read a
   GeoTIFF's overview levels.
 
+- Real trees from the LiDAR survey: about 460,000 tree tops (`tools/fetch_lidar_trees.py` -> `data/lidar_trees.json`,
+  1.7 MB) replace the random woods and the random street trees wherever the survey covers the map. Each stands where a
+  real tree does, at its real height (capped at 24 m), off the roads and 3 m clear of buildings; they are planted area
+  by area as you drive, and the area around the start is planted before the first frame. Real woods are thinner than
+  the random ones were, so there are fewer polygons a frame, and loading is faster (no 15,000 random street trees).
+
 ### Fixed
 - Loading is faster: custom buildings only check the roads near them for overlaps, and the heights are decoded at once.
 - Hand-placed and mapped scenery no longer uses up the street-tree budget (it pushed out about 5,600 trees).

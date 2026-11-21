@@ -232,6 +232,10 @@ class World:
         procedural = self.meta.get("procedural_props", True)
         from .streetdetail import mark_details
         self.woods = data.get("woods", [])                      # NSTDB treed areas (tools/fetch_landcover.py)
+        self.lidar_trees = None                                 # real trees from the LiDAR survey (game/lidar_trees.py)
+        if data.get("lidar_trees"):
+            from .lidar_trees import LidarTrees
+            self.lidar_trees = LidarTrees(data["lidar_trees"], CELL)
         self.marks = data.get("marks", [])                      # OSM stop signs, signals, crossings...
         self.paint, mark_props = mark_details(self)             # stop bars and crosswalks, plus signs and signals
         osm_props = ([l for l in landmarks if l["kind"] in ("cenotaph", "lighthouse")] + data.get("props", [])
@@ -253,6 +257,7 @@ class World:
         if procedural and self.woods:
             from .landcover import WoodsIndex
             self._woods_index = WoodsIndex(self.woods)
+        self._streaming = procedural and (self._woods_index is not None or self.lidar_trees is not None)
 
     def _carve_overpasses(self, terrain):
         """The bare-earth LiDAR includes bridge embankments, while each overpass builds its own deck and ramps on top
@@ -306,6 +311,8 @@ class World:
                 zoning_mod.apply(data, zones)
         from .landcover import load_beside as load_woods
         data["woods"] = load_woods(path)
+        from .lidar_trees import load_beside as load_trees
+        data["lidar_trees"] = load_trees(path)
         if custom == "auto":
             custom = os.path.join(os.path.dirname(os.path.abspath(path)), "custom_buildings.json")
         if custom and os.path.exists(custom):
@@ -473,7 +480,7 @@ class World:
         all of those near the point, and `far` of the others (a second query in the same frame passes 0)."""
         out = []
         gx0, gx1, gy0, gy1 = int((x - r) // CELL), int((x + r) // CELL), int((y - r) // CELL), int((y + r) // CELL)
-        if self._woods_index is not None:
+        if self._streaming:
             self._stream_woods(x, y, gx0, gx1, gy0, gy1, far)
         for gx in range(gx0, gx1 + 1):
             for gy in range(gy0, gy1 + 1):
@@ -516,7 +523,7 @@ class World:
         """Make every woods cell within r of (x, y) now (a loading screen, a test, a benchmark)."""
         for gx in range(int((x - r) // CELL), int((x + r) // CELL) + 1):
             for gy in range(int((y - r) // CELL), int((y + r) // CELL) + 1):
-                if self._woods_index is not None and (gx, gy) not in self._woods_made:
+                if self._streaming and (gx, gy) not in self._woods_made:
                     self._make_woods(gx, gy)
 
     def _make_woods(self, gx, gy):
@@ -532,9 +539,15 @@ class World:
         bx0, by0, bx1, by1 = self.bounds
         if x0 > bx1 or y0 > by1 or x0 + CELL < bx0 or y0 + CELL < by0:
             return
-        from .props import MIN_GAP, woods_cell
-        trees = woods_cell(self, self._woods_index, gx, gy, CELL, lambda x, y: self._prop_within(x, y, MIN_GAP),
-                           seed=self._woods_seed)
+        from .props import MIN_GAP, lidar_cell, woods_cell
+        crowded = lambda x, y: self._prop_within(x, y, MIN_GAP)       # noqa: E731
+        real = self.lidar_trees
+        if real is not None and real.covered(x0 + CELL / 2, y0 + CELL / 2):
+            trees = lidar_cell(self, real, gx, gy, CELL, crowded)    # the survey's real trees
+        elif self._woods_index is not None:
+            trees = woods_cell(self, self._woods_index, gx, gy, CELL, crowded, seed=self._woods_seed)
+        else:
+            trees = []
         trees = [t for t in trees if not self._near_span(t["x"], t["y"], 4.0)]
         if trees:
             self._prop_grid[(gx, gy)].extend(trees)

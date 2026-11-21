@@ -327,10 +327,16 @@ convert again. If the download fails (busy servers), run the query at https://ov
   approximate. Skip it with `--no-zoning`.
 - `--no-cops` (or **C** in game) turns the police, wanted level and busting off, for a relaxed drive.
 
-### Real woods
+### Real trees
 
-`data/landcover.json` (included) comes from the Nova Scotia Topographic Database land cover layer, and the game plants
-trees in the real treed areas. Refresh it with `python tools/fetch_landcover.py` (standard library only). If the download is blocked, save the GeoJSON from
+The trees stand where real ones do. `data/lidar_trees.json` (included, about 460,000 trees) holds every tree top the
+2020 LiDAR survey shows: canopy height (surface model minus ground model, 4 m overview) peaking above its neighbours in
+every direction, with its real height (capped at 24 m) and a crown that grows with it. Woods, tree lines, yard trees
+and street trees all come from it, planted area by area as you drive, kept off roads and 3 m clear of buildings.
+`python tools/fetch_lidar_trees.py` rebuilds it (Open Government Licence - Canada).
+
+Where the survey has no data (across the border in New Brunswick), the game plants random trees in the real treed
+areas instead: `data/landcover.json` (included) comes from the Nova Scotia Topographic Database land cover layer. Refresh it with `python tools/fetch_landcover.py` (standard library only). If the download is blocked, save the GeoJSON from
 `https://data.novascotia.ca/api/geospatial/xed8-vvg5?method=export&format=GeoJSON` and run
 `python tools/fetch_landcover.py that_file.json`. Credit: "Contains information licensed under the Open Government
 Licence - Nova Scotia."

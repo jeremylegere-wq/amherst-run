@@ -26,6 +26,9 @@ MAX_PROPS = 17500
 WOODS_CELL_CAP = 8        # most streamed woods trees in one 40 m prop cell (~1 per 200 m2: a deep wood fills the
                           # 130 m draw radius with ~300 trees, about what the renderer can afford)
 WOODS_CLEAR = 1.5         # woods trees keep this far from a road edge
+LIDAR_CLEAR = 1.5           # metres from a road edge a real (LiDAR) tree may stand: street trees are close to the curb
+LIDAR_MAX_H = 24.0          # metres: the tallest real tree drawn
+LIDAR_HOUSE_GAP = 3.0       # metres a real tree keeps from a building (OSM outlines sit ~3 m off the LiDAR roofs)
 MONUMENTS = {"cenotaph": (6.0, 1.4), "lighthouse": (10.6, 1.6)}   # kind -> (height, radius)
 SCENERY = {"horse": (2.2, 1.2, 0.9), "gravestone": (0.9, 0.4, 0.3), "fence": (1.3, 0.0, 0.0),
            "dam": (7.0, 0.0, 0.0), "pole": (9.5, 0.2, 0.16), "tower": (24.0, 0.0, 1.2)}   # kind -> (h, r, cr)
@@ -169,6 +172,7 @@ def build_props(world, osm_props=(), seed=1, procedural=True):
     props.extend(streetdetail.furniture(world, rng, spacing.free,
                                         lambda x, y, clear, rad: _site_ok(world, x, y, clear, rad), spacing.add))
 
+    real = getattr(world, "lidar_trees", None)
     for r in world.roads:
         if len(props) >= MAX_PROPS:
             break
@@ -189,6 +193,8 @@ def build_props(world, osm_props=(), seed=1, procedural=True):
                         continue
                     off = (hw + rng.uniform(2.8, 4.2)) * side
                     x, y = a[0] + dx * s + nx * off, a[1] + dy * s + ny * off
+                    if real is not None and real.covered(x, y):
+                        continue                             # the LiDAR survey's own trees stand here instead
                     if spacing.free(x, y) and _site_ok(world, x, y, TREE_CLEAR, 1.2):
                         props.append(_tree(rng, x, y))
                         spacing.add(x, y)
@@ -230,8 +236,29 @@ def woods_cell(world, index, cx, cy, size, existing, seed=1):
     the whole cell at once. Deterministic: the same cell always gets the same trees, whatever was made before it."""
     x0, y0 = cx * size, cy * size
     sites = index.sites(x0, y0, size, seed)
+    return _plant(world, sites, cx, cy, size, existing, _tree_from_hash, WOODS_CLEAR, 1.2)
+
+
+def lidar_cell(world, trees, cx, cy, size, existing):
+    """Real trees (game.lidar_trees.LidarTrees) for prop cell (cx, cy): the survey's tree tops, tallest first, with
+    the same checks as the woods (not on roads, buildings, water or rails, not crowding another prop)."""
+    return _plant(world, trees.in_cell(cx, cy), cx, cy, size, existing, _tree_from_lidar, LIDAR_CLEAR, LIDAR_HOUSE_GAP)
+
+
+def _tree_from_lidar(h, x, y):
+    """A tree of the real height (capped), its crown growing with it; the colour comes from its position."""
+    k = int(x * 7.0 + y * 13.0) & 0xFFFF
+    hh = min(LIDAR_MAX_H, max(3.0, h))
+    return {"kind": "tree", "x": round(x, 2), "y": round(y, 2), "h": round(hh, 2),
+            "r": round(min(5.0, max(1.6, 0.8 + 0.22 * hh)), 2), "cr": 0.45, "c": k % 3}
+
+
+def _plant(world, sites, cx, cy, size, existing, make, clear, gap):
+    """Keep the sites [(x, y, data)] of prop cell (cx, cy) that are clear of roads (`clear` m), buildings, water, rails
+    and other props, and make a tree of each with make(data, x, y)."""
     if not sites:
         return []
+    x0, y0 = cx * size, cy * size
     x1, y1 = x0 + size, y0 + size
     px = np.array([s[0] for s in sites])
     py = np.array([s[1] for s in sites])
@@ -246,7 +273,7 @@ def woods_cell(world, index, cx, cy, size, existing, seed=1):
         L[L == 0] = 1e-12
         t = np.clip(((px[:, None] - ax) * dx + (py[:, None] - ay) * dy) / L, 0.0, 1.0)
         d = np.hypot(px[:, None] - (ax + t * dx), py[:, None] - (ay + t * dy)) - w / 2.0
-        ok &= d.min(axis=1) >= WOODS_CLEAR
+        ok &= d.min(axis=1) >= clear
     if not ok.any():
         return []
     blds = set()
@@ -254,7 +281,7 @@ def woods_cell(world, index, cx, cy, size, existing, seed=1):
         for gy in (cy - 1, cy, cy + 1):
             blds.update(world._bld_grid.get((gx, gy), ()))
     boxes = [world.buildings[i]["bbox"] for i in blds]
-    boxes = [b for b in boxes if b[2] >= x0 - 1.2 and b[0] <= x1 + 1.2 and b[3] >= y0 - 1.2 and b[1] <= y1 + 1.2]
+    boxes = [b for b in boxes if b[2] >= x0 - gap and b[0] <= x1 + gap and b[3] >= y0 - gap and b[1] <= y1 + gap]
     water = _near(world.water, x0, y0, x1, y1, 2.0)
     if water:                                   # in the water? tested for the whole cell at once
         from .landcover import inside_edges, ring_edges
@@ -269,12 +296,14 @@ def woods_cell(world, index, cx, cy, size, existing, seed=1):
     for (x, y, h), good in zip(sites, ok):
         if not good or existing(x, y):
             continue
-        if boxes and any(b[0] - 1.2 <= x <= b[2] + 1.2 and b[1] - 1.2 <= y <= b[3] + 1.2 for b in boxes):
-            if any(world.in_building(x + ox, y + oy) for ox, oy in ((0, 0), (1.2, 0), (-1.2, 0), (0, 1.2), (0, -1.2))):
+        if boxes and any(b[0] - gap <= x <= b[2] + gap and b[1] - gap <= y <= b[3] + gap for b in boxes):
+            if any(world.in_building(x + ox, y + oy) for ox, oy in ((0, 0), (gap, 0), (-gap, 0), (0, gap), (0, -gap),
+                                                                     (gap * 0.7, gap * 0.7), (-gap * 0.7, gap * 0.7),
+                                                                     (gap * 0.7, -gap * 0.7), (-gap * 0.7, -gap * 0.7))):
                 continue
         if rails and not _clear_of(x, y, (), rails):
             continue
-        out.append(_tree_from_hash(h, x, y))
+        out.append(make(h, x, y))
         if len(out) >= WOODS_CELL_CAP:
             break
     return out

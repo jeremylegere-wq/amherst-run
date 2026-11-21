@@ -200,6 +200,8 @@ class Battle(TwoPlayer):
 
     def _spawn(self, i):
         x, y, h = self._starts[i]
+        if hasattr(self._game_ref.world, "warm_woods"):
+            self._game_ref.world.warm_woods(x, y, 140.0)     # the trees in view are there from the first frame
         car = player_car(i, x, y, h)
         car.z = self._game_ref.world.ground(x, y)
         return car
