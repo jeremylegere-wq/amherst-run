@@ -27,7 +27,8 @@ WOODS_CELL_CAP = 8        # most streamed woods trees in one 40 m prop cell (~1 
                           # 130 m draw radius with ~300 trees, about what the renderer can afford)
 WOODS_CLEAR = 1.5         # woods trees keep this far from a road edge
 MONUMENTS = {"cenotaph": (6.0, 1.4), "lighthouse": (10.6, 1.6)}   # kind -> (height, radius)
-SCENERY = {"horse": (2.2, 1.2, 0.9), "gravestone": (0.9, 0.4, 0.3), "fence": (1.3, 0.0, 0.0)}   # kind -> (h, r, cr)
+SCENERY = {"horse": (2.2, 1.2, 0.9), "gravestone": (0.9, 0.4, 0.3), "fence": (1.3, 0.0, 0.0),
+           "dam": (7.0, 0.0, 0.0)}                                  # kind -> (h, r, cr)
 FENCE_PIECE = 4.0          # metres: long fences are cut into pieces so each sorts where it really is
 TREE_PROB = {"main": 0.6, "side": 0.7, "lane": 0.35}
 
@@ -105,6 +106,16 @@ def _scenery(p):
     if "bearing" in base:                                    # compass degrees the front faces -> map heading
         b = math.radians(base.pop("bearing"))
         base["heading"] = round(math.atan2(-math.cos(b), math.sin(b)), 4)
+    if p["kind"] == "dam":                                  # solid along its crest (invisible car_block circles)
+        fx, fy = math.cos(base.get("heading", 0.0)), math.sin(base.get("heading", 0.0))
+        half = base.get("length", 50.0) / 2.0
+        out = [base]
+        b = -half
+        while b <= half:
+            out.append({"kind": "car_block", "x": base["x"] - fx * 0.8 - fy * b, "y": base["y"] - fy * 0.8 + fx * b,
+                        "h": 0.0, "r": 0.0, "cr": 1.5})
+            b += 2.5
+        return out
     if p["kind"] != "fence":
         return [base]
     x0, y0, x1, y1 = float(p["x"]), float(p["y"]), float(p["x2"]), float(p["y2"])
@@ -130,7 +141,7 @@ def build_props(world, osm_props=(), seed=1, procedural=True):
         kind = p.get("kind")
         if kind == "tree" and _site_ok(world, x, y, 0.4, 0.8) and spacing.free(x, y):
             t = _tree(rng, x, y)
-            t.update({k: p[k] for k in ("h", "r", "c") if k in p})          # a hand-placed tree keeps its size
+            t.update({k: p[k] for k in ("h", "r", "c", "leaf") if k in p})  # a hand-placed tree keeps its size
             props.append(t)
         elif kind in SCENERY:                                                # hand-placed scenery (map_edits.json)
             props.extend(_scenery(p))
@@ -141,8 +152,10 @@ def build_props(world, osm_props=(), seed=1, procedural=True):
             props.append(dict(p))
         elif kind in MONUMENTS and _site_ok(world, x, y, 0.3, 1.2) and spacing.free(x, y):
             h, r = MONUMENTS[kind]
-            props.append({"kind": kind, "x": round(x, 2), "y": round(y, 2), "h": h, "r": r, "cr": r,
-                          "c": 0, "label": p.get("label", "")})
+            m = {"kind": kind, "x": round(x, 2), "y": round(y, 2), "h": h, "r": r, "cr": r,
+                 "c": 0, "label": p.get("label", "")}
+            m.update({k: p[k] for k in ("site", "heading") if k in p})
+            props.append(m)
         else:
             continue
         spacing.add(x, y)

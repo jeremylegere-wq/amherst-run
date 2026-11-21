@@ -4815,6 +4815,108 @@
      8821.77,
      109.07
     ]
+   },
+   {
+    "at": [
+     1760.75,
+     -1570.7
+    ],
+    "points": [
+     [
+      1769.36,
+      -1573.86
+     ],
+     [
+      1767.55,
+      -1564.54
+     ],
+     [
+      1757.73,
+      -1566.45
+     ],
+     [
+      1759.55,
+      -1575.77
+     ]
+    ],
+    "height": 5.7,
+    "material": "clapboard",
+    "colour": [
+     232,
+     226,
+     204
+    ],
+    "roof": "gable",
+    "roof_height": 2.9,
+    "roof_colour": [
+     108,
+     86,
+     72
+    ],
+    "arch": "two_storey+porch",
+    "front": 11.0,
+    "door_at": 0.55,
+    "door": [
+     244,
+     246,
+     246
+    ],
+    "shutters": [
+     46,
+     94,
+     102
+    ],
+    "plinth": [
+     134,
+     72,
+     62
+    ],
+    "plinth_h": 3.1,
+    "_note": "Penny Lane home (reference photos): red brick ground floor, cream siding above, brown gable roof, covered front porch, teal shutters"
+   },
+   {
+    "at": [
+     630.6,
+     -1346.95
+    ],
+    "points": [
+     [
+      623.5,
+      -1350.7
+     ],
+     [
+      628.8,
+      -1354.7
+     ],
+     [
+      633.83,
+      -1348.2
+     ],
+     [
+      628.53,
+      -1344.2
+     ]
+    ],
+    "height": 6.2,
+    "material": "clapboard",
+    "colour": [
+     134,
+     122,
+     106
+    ],
+    "roof": "hip",
+    "roof_height": 2.3,
+    "roof_colour": [
+     156,
+     142,
+     122
+    ],
+    "arch": "two_storey",
+    "front": 322.0,
+    "front_windows": true,
+    "door_at": -1.0,
+    "chimney": 0.0,
+    "_note": "Harding Ave home (reference photos + LiDAR pyramid roof): two-storey foursquare, taupe shingles, tan hip roof; the front 8.2 m of the OSM outline"
    }
   ]
  },
@@ -5242,6 +5344,44 @@
       3006.07
      ]
     ]
+   },
+   {
+    "type": "lane",
+    "width": 3.4,
+    "name": "",
+    "speed": 20,
+    "rc": "LO",
+    "service": "driveway",
+    "points": [
+     [
+      1760.18,
+      -1595.56
+     ],
+     [
+      1756.41,
+      -1576.13
+     ]
+    ],
+    "_note": "Penny Lane home: paved driveway to the garage"
+   },
+   {
+    "type": "lane",
+    "width": 3.4,
+    "name": "",
+    "speed": 20,
+    "rc": "LO",
+    "service": "driveway",
+    "points": [
+     [
+      613.85,
+      -1359.32
+     ],
+     [
+      632.57,
+      -1335.36
+     ]
+    ],
+    "_note": "Harding Ave home: driveway on the right, back to the garage"
    }
   ]
  },
@@ -5882,6 +6022,50 @@
     ],
     "caption": "TIME STANDS STILL",
     "_note": "Hastings Rd church (reference photos + LiDAR footprint): easter egg - a black horse frozen mid-gallop beside the church, an original homage to Atlantic realist painting"
+   },
+   {
+    "kind": "dam",
+    "lat": 45.8082834,
+    "lon": -64.1605567,
+    "bearing": 270.0,
+    "length": 50.0,
+    "h": 7.0,
+    "_note": "Pumping Station dam (reference photo + LiDAR: ~6 m drop along a 50 m crest, river flows west): spillway with water curtain, sluice, gate piers and catwalk, fish ladder on the north bank"
+   },
+   {
+    "kind": "tree",
+    "lat": 45.8402391,
+    "lon": -64.1953695,
+    "_note": "Penny Lane home: big shade maple beside the driveway",
+    "h": 9.5,
+    "r": 3.6,
+    "cr": 0.5,
+    "c": 0
+   },
+   {
+    "kind": "tree",
+    "lat": 45.8401889,
+    "lon": -64.1951008,
+    "_note": "Penny Lane home: purple-leaf plum on the lawn",
+    "h": 4.5,
+    "r": 2.0,
+    "cr": 0.3,
+    "c": 0,
+    "leaf": [
+     112,
+     52,
+     74
+    ]
+   },
+   {
+    "kind": "tree",
+    "lat": 45.8380754,
+    "lon": -64.2097042,
+    "_note": "Harding Ave home: tree behind the house",
+    "h": 9.0,
+    "r": 3.4,
+    "cr": 0.5,
+    "c": 2
    }
   ]
  },
@@ -5898,6 +6082,30 @@
      82
     ],
     "_note": "Norman St Cape Cod: dark grey crossover parked nose-in beside the house (reference photos)"
+   },
+   {
+    "lat": 45.8381534,
+    "lon": -64.2100095,
+    "bearing": 142.0,
+    "model": "wagon",
+    "colour": [
+     166,
+     182,
+     192
+    ],
+    "_note": "Harding Ave home: 1980s silver-blue four-wheel-drive wagon on the right of the driveway, tail lights to the street (reference photos)"
+   },
+   {
+    "lat": 45.8381299,
+    "lon": -64.209952,
+    "bearing": 142.0,
+    "model": "sedan",
+    "colour": [
+     38,
+     42,
+     48
+    ],
+    "_note": "Harding Ave home: dark hatchback further up the driveway"
    }
   ]
  }

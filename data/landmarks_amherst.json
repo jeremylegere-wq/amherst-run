@@ -222,7 +222,8 @@
     -64.2131
    ],
    "search": 7000,
-   "fallback_nearest": false
+   "fallback_nearest": false,
+   "lighthouse": false
   },
   {
    "id": "wind_farm_marsh",
@@ -247,6 +248,18 @@
    "spacing": 330,
    "hub_height": 99,
    "blade": 50
+  },
+  {
+   "id": "border_lighthouse",
+   "kind": "lighthouse",
+   "label": "Welcome to Nova Scotia",
+   "at": [
+    45.854917,
+    -64.261073
+   ],
+   "site": "border",
+   "facing": 34.0,
+   "_note": "66 Cumberland Loop (NS Civic Address File point): the border welcome lighthouse and sign by Hwy 104 Exit 1, facing the off-ramp"
   }
  ]
 }

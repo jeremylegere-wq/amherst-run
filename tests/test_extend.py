@@ -191,10 +191,14 @@ class Scenery(unittest.TestCase):
         data["roads"] = [{"type": "side", "width": 8, "name": "Elm St", "points": [[-200, 0], [200, 0]]}]
         data["props"] = [{"kind": "horse", "x": 0.0, "y": 12.0, "heading": 0.0, "lift": 0.3},
                          {"kind": "gravestone", "x": 4.0, "y": 14.0, "h": 0.9},
-                         {"kind": "fence", "x": -10.0, "y": 8.0, "x2": 10.0, "y2": 8.0}]
+                         {"kind": "fence", "x": -10.0, "y": 8.0, "x2": 10.0, "y2": 8.0},
+                         {"kind": "dam", "x": 30.0, "y": 30.0, "heading": 3.14, "length": 30.0, "h": 7.0},
+                         {"kind": "lighthouse", "x": -20.0, "y": -30.0, "site": "border", "heading": 1.57}]
         world = World(data)
-        kinds = {p["kind"] for p in world.props_near(0.0, 12.0, 30.0)}
-        self.assertTrue({"horse", "gravestone", "fence"} <= kinds)
+        kinds = {p["kind"] for p in world.props_near(0.0, 0.0, 45.0)}
+        self.assertTrue({"horse", "gravestone", "fence", "dam", "car_block", "lighthouse"} <= kinds)
+        solid = [p for p in world.props_near(30.0, 30.0, 20.0) if p["kind"] == "car_block"]
+        self.assertGreater(len(solid), 8)                                    # the dam crest is solid
         for style in R.STYLES:
             r = R.Renderer3D(world, style=style)
             car = Car(-6.0, 2.0, 0.6)

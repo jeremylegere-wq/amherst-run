@@ -50,6 +50,9 @@ MODELS = {
                 ride=0.34, wheel=1.45, bed=None, spare=False),
     "sorento": dict(length=4.8, width=1.9, mass=1.3, power=1.03, cab=(-2.1, 0.9), cab_top=(-1.9, 0.3), z=(1.18, 1.88),
                     ride=0.38, wheel=1.5, bed=None, spare=False),
+    # boxy 1980s four-wheel-drive station wagon: short hood, tall glasshouse running right to the back (parked cars)
+    "wagon": dict(length=4.2, width=1.65, mass=0.95, power=0.9, cab=(-2.0, 0.75), cab_top=(-1.95, 0.45), z=(0.92, 1.5),
+                  ride=0.3, wheel=1.3, bed=None, spare=False),
     "ram": dict(length=5.9, width=2.0, mass=1.65, power=0.97, cab=(-0.5, 1.55), cab_top=(-0.3, 0.95), z=(1.2, 2.05),
                 ride=0.5, wheel=1.9, bed=(-2.95, -0.55), spare=False),
 }

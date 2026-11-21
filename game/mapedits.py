@@ -24,7 +24,7 @@ ROAD_FIELDS = ("type", "width", "name", "speed", "rc", "lanes", "oneway", "surfa
 BUILDING_FIELDS = ("height", "material", "colour", "roof", "roof_height", "roof_colour", "landmark", "label", "role",
                    "chimney", "ridge_across", "arch", "tower", "steeple", "storeys", "shopfront", "dormers", "plinth",
                    "front", "door", "door_at", "sidelights", "shutters",
-                   "front_windows", "plaque", "window_h")   # house details: see Renderer3D._house
+                   "front_windows", "plaque", "window_h", "plinth_h")   # house details: see Renderer3D._house
 MIN_OVERLAP = 0.35                  # metres of intrusion before something counts as overlapping (walls touch in rows)
 
 

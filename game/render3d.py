@@ -538,7 +538,7 @@ class Renderer3D:
             ex = {"material": b.get("material"), "landmark": b.get("landmark"),
                   "tower": b.get("tower", False), "steeple": b.get("steeple", "spire"),
                   "storeys": b.get("storeys"), "shopfront": b.get("shopfront"), "zone": b.get("zone"),
-                  "plinth": b.get("plinth"), "dormers": int(b.get("dormers") or 0),
+                  "plinth": b.get("plinth"), "plinth_h": b.get("plinth_h"), "dormers": int(b.get("dormers") or 0),
                   "front": b.get("front"), "door": b.get("door"), "door_at": b.get("door_at"),
                   "sidelights": b.get("sidelights"), "shutters": b.get("shutters"),
                   "front_windows": b.get("front_windows"), "plaque": b.get("plaque"), "window_h": b.get("window_h"),
@@ -1517,11 +1517,12 @@ class Renderer3D:
             gf = self._building_ground(idx)[0]
             z0, z1 = self._g(x0, y0) - gf - 0.05, self._g(x1, y1) - gf - 0.05
         self._poly(surf, [(x0, y0, z0), (x1, y1, z1), (x1, y1, h), (x0, y0, h)], self.col(base, sh, fog), ink)
+        ex = st["ex"]
+        if ex and ex.get("plinth") and dist < SHOP_DETAIL:                # a stone or painted base course (or a
+            ph = min(h, float(ex.get("plinth_h") or 1.6))                 # brick ground floor under siding: plinth_h)
+            self._poly(surf, [(x0, y0, z0), (x1, y1, z1), (x1, y1, ph), (x0, y0, ph)], self.col(tuple(ex["plinth"]), sh, fog), ink)
         if st["house"]:
             self._draw_house_wall(surf, idx, st["house"], wi, x0, y0, x1, y1, nx, ny, h, z0, z1, sh, fog, ink)
-        ex = st["ex"]
-        if ex and ex.get("plinth") and dist < SHOP_DETAIL:                # a stone or painted base course
-            self._poly(surf, [(x0, y0, z0), (x1, y1, z1), (x1, y1, 1.6), (x0, y0, 1.6)], self.col(tuple(ex["plinth"]), sh, fog), ink)
         if wi in st["shops"]:
             self._draw_shop_front(surf, idx, st["ex"], x0, y0, x1, y1, h, sh, fog, ink)
         elif st["win"]:
@@ -1570,7 +1571,7 @@ class Renderer3D:
         if kind == "garage":
             if front or L >= 5.0:
                 w = min(2.6, L - 0.8)
-                rect((L - w) / 2, (L + w) / 2, 0.05, 2.2, self.col(hs["garage_door"], sh, fog))
+                rect((L - w) / 2, (L + w) / 2, 0.05, 2.2, self.col(house.get("door_rgb") or hs["garage_door"], sh, fog))
             return
         side = 0.0
         dtop = min(fh + 2.1, h - 0.2)                                       # the door stays under the eaves
@@ -1975,7 +1976,11 @@ class Renderer3D:
             R = self.focal * p["r"] / c[2]
             if R < 0.8:
                 return
-            lit, shade = st["tree_cols"][p["c"] % len(st["tree_cols"])]
+            if p.get("leaf"):                                   # a hand-set leaf colour (a purple-leaf plum...)
+                lit = tuple(p["leaf"])
+                shade = tuple(int(v * 0.72) for v in lit)
+            else:
+                lit, shade = st["tree_cols"][p["c"] % len(st["tree_cols"])]
             outer = [(c[0] + R * k * math.cos(a), c[1] + R * 0.9 * k * math.sin(a)) for a, k in BLOB12]
             self._emit(surf, outer, self.col(shade, 3, fog), ink)
             s, ox, oy = 0.78, -R * 0.14, -R * 0.16      # lit blob offset up-left leaves a shadow crescent
@@ -1989,12 +1994,7 @@ class Renderer3D:
             self._draw_frustum(surf, fr, (-0.8, 0.8, -0.8, 0.8), (-0.55, 0.55, -0.55, 0.55), 0.8, 4.4, g, g, fog, ink)
             self._draw_frustum(surf, fr, (-0.35, 0.35, -0.35, 0.35), (-0.2, 0.2, -0.2, 0.2), 4.4, 6.0, br, br, fog, ink)
         elif p["kind"] == "lighthouse":
-            fr = _Frame(x, y, 0.0)
-            white, red = (246, 246, 242), (220, 52, 48)
-            for z0, z1, w0, w1, c in ((0.0, 3.0, 1.6, 1.4, white), (3.0, 6.0, 1.4, 1.2, red), (6.0, 8.6, 1.2, 1.05, white)):
-                self._draw_frustum(surf, fr, (-w0, w0, -w0, w0), (-w1, w1, -w1, w1), z0, z1, c, c, fog, ink)
-            self._draw_box(surf, fr, -0.85, 0.85, -0.85, 0.85, 8.6, 9.7, (255, 236, 140), (255, 236, 140), fog, ink)
-            self._draw_frustum(surf, fr, (-1.05, 1.05, -1.05, 1.05), (-0.1, 0.1, -0.1, 0.1), 9.7, 10.6, red, red, fog, ink)
+            self._draw_lighthouse(surf, p, fog, ink)
         elif p["kind"] == "horse":
             self._draw_horse(surf, p, fog, ink)
         elif p["kind"] == "gravestone":                       # one flat slab face, the side toward the camera
@@ -2008,6 +2008,8 @@ class Renderer3D:
                        self.col(tuple(p.get("colour") or (120, 122, 128)), 2, fog), ink)
         elif p["kind"] == "fence":
             self._draw_fence(surf, p, fog, ink)
+        elif p["kind"] == "dam":
+            self._draw_dam(surf, p, fog, ink)
         elif p["kind"] in DETAIL_KINDS:
             self._draw_furniture(surf, p, fog, ink, dist)
         else:
@@ -2032,6 +2034,148 @@ class Renderer3D:
         self._emit(surf, k, rgb, ink)
         if outline is not None and R > 2.5:
             pygame.draw.polygon(surf, outline, [(c[0] + (px - c[0]) * 0.72, c[1] + (py - c[1]) * 0.72) for px, py in k], 1)
+
+    def _oct(self, surf, x, y, z0, z1, r0, r1, rgb, fog, ink, cap=False, shade=None):
+        """An eight-sided tapered tower section: only the sides facing the camera, and its top when seen from above."""
+        ang = [math.pi / 8 + k * math.pi / 4 for k in range(8)]
+        for k in range(8):
+            a0, a1 = ang[k], ang[(k + 1) % 8]
+            am = (a0 + a1) / 2 if k < 7 else a0 + math.pi / 8
+            nx, ny = math.cos(am), math.sin(am)
+            if (self.cx - (x + nx * r0)) * nx + (self.cy - (y + ny * r0)) * ny <= 0:
+                continue
+            sh = shade if shade is not None else shade_index(nx, ny, 0.0)
+            self._poly(surf, [(x + r0 * math.cos(a0), y + r0 * math.sin(a0), z0), (x + r0 * math.cos(a1), y + r0 * math.sin(a1), z0),
+                              (x + r1 * math.cos(a1), y + r1 * math.sin(a1), z1), (x + r1 * math.cos(a0), y + r1 * math.sin(a0), z1)],
+                       self.col(rgb, sh, fog), ink)
+        if cap and self.cz > z1:
+            self._poly(surf, [(x + r1 * math.cos(a), y + r1 * math.sin(a), z1) for a in ang], self.col(rgb, 0, fog), ink)
+
+    def _draw_lighthouse(self, surf, p, fog, ink):
+        """A white octagonal lighthouse with a red gallery, glowing lantern and red cap; at the border welcome site
+        ("site": "border") also a porch, a granite planter, the welcome sign and two flagpoles.
+        Local frame for the extras: a = towards the road the site faces, b = to its right."""
+        x, y = p["x"], p["y"]
+        white, red, granite = (246, 246, 242), (196, 44, 44), (146, 148, 150)
+        glass = (252, 232, 136)
+        border = p.get("site") == "border"
+        hd = p.get("heading", 0.0)
+        fr = _Frame(x, y, hd)
+        fx, fy = fr.forward
+        tower_first = border and (self.cx - x) * fx + (self.cy - y) * fy > 0    # camera on the sign side
+
+        def site():
+            mulch = (96, 68, 46)
+            self._draw_box(surf, fr, -3.2, 3.2, -3.6, 3.6, 0.0, 0.35, granite, mulch, fog, ink)       # planter
+            self._draw_box(surf, fr, 1.35, 2.35, -0.65, 0.65, 0.35, 2.95, white, white, fog, ink)    # porch
+            self._draw_box(surf, fr, 2.35, 2.4, -0.38, 0.38, 0.35, 2.55, red, red, fog, ink)          # its door
+            self._draw_box(surf, fr, 1.3, 2.45, -0.75, 0.75, 2.95, 3.2, red, red, fog, ink)           # its roof
+            blue, gold, plate, post = (26, 78, 142), (224, 184, 62), (242, 244, 246), (124, 84, 48)
+            sa, sb = 6.5, 4.2                                                                       # the sign
+            for b in (sb - 1.85, sb + 1.85):
+                self._draw_box(surf, fr, sa - 0.14, sa + 0.14, b - 0.12, b + 0.12, 0.0, 3.15, post, post, fog, ink)
+            self._draw_box(surf, fr, sa - 0.09, sa + 0.09, sb - 1.75, sb + 1.75, 1.15, 2.85, blue, blue, fog, ink)
+            self._draw_box(surf, fr, sa - 0.12, sa + 0.12, sb - 1.78, sb + 1.78, 2.85, 3.05, gold, gold, fog, ink)
+            for side in (1, -1):                                                                    # white text panel
+                a = sa + side * 0.1
+                if (self.cx - (x + fx * a)) * fx * side + (self.cy - (y + fy * a)) * fy * side > 0:
+                    self._draw_box(surf, fr, a - 0.01, a + 0.01, sb - 1.35, sb + 1.35, 1.55, 2.45, plate, plate, fog)
+            for fa, fb, flag in ((-2.6, -5.4, (206, 36, 44)), (-2.8, 1.2, (32, 92, 168))):           # flagpoles
+                pole = self._billboard(x + fx * fa - fy * fb, y + fy * fa + fx * fb, 0.0, 8.2, 0.06)
+                if pole:
+                    self._emit(surf, pole, self.col(white, 3, fog), ink)
+                self._draw_box(surf, fr, fa - 0.02, fa + 0.02, fb + 0.06, fb + 1.55, 7.05, 8.0, flag, flag, fog, ink)
+
+        def tower():
+            self._oct(surf, x, y, 0.35, 1.15, 2.15, 2.05, granite, fog, ink, cap=True)
+            self._oct(surf, x, y, 1.15, 6.6, 1.9, 1.25, white, fog, ink)
+            self._oct(surf, x, y, 6.6, 6.82, 1.55, 1.55, red, fog, ink, cap=True)
+            self._oct(surf, x, y, 6.82, 8.05, 0.92, 0.92, glass, fog, ink, shade=0)                  # lit: no shading
+            self._oct(surf, x, y, 6.82, 7.35, 1.48, 1.48, red, fog, ink)                            # gallery rail
+            self._oct(surf, x, y, 8.05, 8.95, 1.08, 0.08, red, fog, ink)
+            spire = self._billboard(x, y, 8.95, 9.45, 0.08)
+            if spire:
+                self._emit(surf, spire, self.col(red, 3, fog), ink)
+
+        if not border:
+            tower()
+        elif tower_first:
+            tower()
+            site()
+        else:
+            site()
+            tower()
+
+    def _draw_dam(self, surf, p, fog, ink):
+        """A concrete overflow dam: spillway with a falling water curtain and white water at its foot, a sluice, gate
+        piers with a catwalk and red handwheels, and a timber-baffled fish ladder down the end bank. The map's own
+        river water lies around it; the dam adds its plunge pool and the sheet of water on the crest.
+        Local frame: a = downstream, b = along the crest (+b = the fish-ladder end), z = up from the river."""
+        hd = p.get("heading", 0.0)
+        fx, fy = math.cos(hd), math.sin(hd)
+        rx, ry = -fy, fx
+        x, y, H, L = p["x"], p["y"], p["h"], p.get("length", 50.0)
+        hb = L / 2.0
+        col = lambda rgb, sh=2: self.col(rgb, sh, fog)                       # noqa: E731
+        concrete, dark, moss = (176, 174, 166), (132, 130, 122), (114, 126, 102)
+        deep, fall, foam = (36, 78, 108), (145, 202, 228), (232, 244, 248)
+        timber, steel, red, grass = (134, 92, 56), (64, 72, 78), (184, 62, 54), (88, 128, 66)
+        pulse = int(10 * math.sin(self.time * 6.0))
+        fall = tuple(max(0, min(255, v + pulse)) for v in fall)
+        fr = _Frame(x, y, hd)
+
+        def P(a, b, z):
+            return (x + fx * a + rx * b, y + fy * a + ry * b, z)
+
+        def quad(pts, rgb, sh=2, outline=True):
+            self._poly(surf, [P(*q) for q in pts], col(rgb, sh), ink if outline else None)
+
+        def box(a0, a1, b0, b1, z0, z1, rgb):
+            self._draw_box(surf, fr, a0, a1, b0, b1, z0, z1, rgb, rgb, fog, ink)
+
+        s0, s1 = -hb, hb - 8.0                                                # spillway span; the north 8 m: works
+        downstream = (self.cx - x) * fx + (self.cy - y) * fy > 0
+
+        def water_below():
+            quad([(0.6, s0 - 2, 0.04), (14.0, s0 - 2, 0.04), (14.0, s1 + 2, 0.04), (0.6, s1 + 2, 0.04)], deep, 3, False)
+            quad([(2.1, s0, 0.08), (4.8, s0, 0.08), (4.8, s1, 0.08), (2.1, s1, 0.08)], foam, 3, False)
+
+        def reservoir():                                                      # the water about to spill over
+            quad([(-2.2, s0, H + 0.02), (-6.0, s0, H + 0.02), (-6.0, s1, H + 0.02), (-2.2, s1, H + 0.02)], deep, 3, False)
+
+        def works():                                                          # sluice, gate piers, catwalk, wheels
+            box(-2.5, 0.5, s1, s1 + 2.3, 0.0, H + 0.4, dark)
+            quad([(0.55, s1 + 0.3, H - 0.1), (0.55, s1 + 2.0, H - 0.1), (3.6, s1 + 2.0, 0.2), (3.6, s1 + 0.3, 0.2)], foam, 3, False)
+            for b0 in (s1 + 2.3, s1 + 3.8, s1 + 5.3):
+                box(-2.8, 1.0, b0, b0 + 0.9, 0.0, H + 1.6, concrete)
+            box(-3.0, 1.2, s1 + 2.1, s1 + 6.4, H + 1.4, H + 1.75, steel)
+            for b in (s1 + 3.35, s1 + 4.85):
+                box(-1.1, -0.8, b - 0.15, b + 0.15, H + 1.75, H + 2.75, steel)
+                box(-1.3, -0.6, b - 0.35, b + 0.35, H + 2.65, H + 2.8, red)
+
+        def ladder():                                                         # flume down the bank, with baffles
+            b0, b1 = s1 + 6.2, s1 + 8.0
+            for b in (b0, b1):
+                quad([(-2.0, b, 0.0), (16.0, b, 0.0), (16.0, b, 1.4), (-2.0, b, H + 0.6)], moss, 2)
+            quad([(-2.0, b0, H - 0.2), (16.0, b0, 0.7), (16.0, b1, 0.7), (-2.0, b1, H - 0.2)], fall, 3, False)
+            for k in range(9):
+                t = (k + 0.5) / 9
+                a, z = -1.2 + t * 16.4, H - 0.1 - t * (H - 1.0)
+                quad([(a + 0.35, b0, z - 0.15), (a + 0.35, b1, z - 0.15), (a - 0.15, b1, z + 0.45), (a - 0.15, b0, z + 0.45)], timber, 2)
+
+        def spillway():
+            box(-2.2, 0.6, s0, s1, 0.0, H, concrete)
+
+        def curtain():
+            quad([(0.65, s0 + 0.3, H + 0.05), (0.65, s1 - 0.3, H + 0.05), (2.2, s1 - 0.3, 0.15), (2.2, s0 + 0.3, 0.15)], fall, 3, False)
+
+        water_below()
+        if downstream:
+            for draw in (reservoir, spillway, curtain, works, ladder):
+                draw()
+        else:
+            for draw in (ladder, curtain, spillway, works, reservoir):
+                draw()
 
     def _draw_fence(self, surf, p, fog, ink):
         """One piece of a white rail fence: a post at its start (and end, for the last piece) and two rails."""

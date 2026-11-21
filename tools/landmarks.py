@@ -174,7 +174,7 @@ def apply_landmarks(data, spec, to_xy=None, area=None):
                     b["role"] = entry["role"]
                 if kind == "courthouse":
                     b["tower"] = bool(entry.get("tower", True))
-                if kind == "visitor_centre":
+                if kind == "visitor_centre" and entry.get("lighthouse", True):
                     _place_beside(b, placed, "lighthouse", entry.get("label", "Lighthouse"))
             names = ", ".join(repr(buildings[i].get("tags", {}).get("name", "unnamed")) for _d, i in chosen[:4])
             more = f" (+{len(chosen) - 4} more)" if len(chosen) > 4 else ""
@@ -226,8 +226,13 @@ def apply_landmarks(data, spec, to_xy=None, area=None):
 
         elif kind == "lighthouse":
             at = _point(entry, "at", to_xy)
-            placed.append({"kind": "lighthouse", "x": round(at[0], 1), "y": round(at[1], 1),
-                           "label": entry.get("label", "Lighthouse")})
+            light = {"kind": "lighthouse", "x": round(at[0], 1), "y": round(at[1], 1), "label": entry.get("label", "Lighthouse")}
+            if entry.get("site"):
+                light["site"] = entry["site"]                    # "border": welcome sign, flags and planter too
+            if entry.get("facing") is not None:                  # compass bearing the door and sign face
+                b = math.radians(entry["facing"])
+                light["heading"] = round(math.atan2(-math.cos(b), math.sin(b)), 4)
+            placed.append(light)
             report.append(f"{lid}: lighthouse placed")
         else:
             report.append(f"{lid}: unknown kind {kind!r} skipped")

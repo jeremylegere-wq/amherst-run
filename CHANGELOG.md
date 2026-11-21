@@ -10,6 +10,17 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 ## [Unreleased]
 
 ### Added
+- The Pumping Station dam on the river east of town (reference photo + LiDAR: a ~6 m drop along a 50 m crest): the
+  spillway with its falling water and white water below, the sluice, gate piers with catwalk and red handwheels, and
+  the timber-baffled fish ladder down the north bank. Solid along its crest.
+- The border welcome lighthouse moved to its real spot at Highway 104 Exit 1 (the civic address point; it stood by the
+  information centre 320 m away) and rebuilt: white octagonal tower, red gallery, lantern and cap, red-doored porch,
+  granite planter, the blue-and-gold welcome sign facing the off-ramp, and two flags.
+- Two more homes from reference photos: a brick-and-cream two-storey on Penny Lane (front gable, porch, teal shutters,
+  attached garage with dormer, purple-leaf plum) and a foursquare on Harding Ave (sunporch, an 80s silver-blue wagon
+  and a dark hatchback in the driveway, cargo trailer, rear garage).
+- `plinth_h` (a brick ground floor under siding), `leaf` colour on hand-placed trees, a garage door takes the `door`
+  colour, and a boxy 80s `wagon` car model for parked cars.
 - The map reaches further north-east (Highway 6 out toward Warren, Tyndal Road, East Amherst): 167 more road pieces
   and 350 LiDAR-found homes and outbuildings. The land-cover woods are downloaded for the whole map, so they cover it.
 - The old church on Hastings Rd (reference photos, LiDAR footprint): a white clapboard meeting house with its gable
