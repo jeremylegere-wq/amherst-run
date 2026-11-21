@@ -82,6 +82,19 @@ def convert(doc, meta):
     return woods
 
 
+def download_box(meta):
+    """(south, west, north, east): the map's whole extent (it grows with tools/extend_map.py), and at least the
+    16 x 19 km box around town the first download used."""
+    lat0, lon0 = meta["origin_lat"], meta["origin_lon"]
+    x0, y0, x1, y1 = meta["bounds"]
+    k = 180.0 / (math.pi * 6371000.0)
+    north, south = lat0 - y0 * k, lat0 - y1 * k
+    west, east = lon0 + x0 * k / math.cos(math.radians(lat0)), lon0 + x1 * k / math.cos(math.radians(lat0))
+    box = (min(south, lat0 - 0.08), min(west, lon0 - 0.12), max(north, lat0 + 0.08), max(east, lon0 + 0.12))
+    print("downloading land cover for %.4f, %.4f - %.4f, %.4f ..." % box)
+    return box
+
+
 def main(argv):
     with open(MAP_PATH) as f:
         meta = json.load(f)["meta"]
@@ -89,9 +102,7 @@ def main(argv):
         with open(argv[1]) as f:
             doc = json.load(f)
     else:
-        lat, lon = meta["origin_lat"], meta["origin_lon"]
-        print("downloading land cover near Amherst ...")
-        doc = download((lat - 0.08, lon - 0.12, lat + 0.08, lon + 0.12))
+        doc = download(download_box(meta))
     woods = convert(doc, meta)
     out = {"_about": "Treed areas, tree lines and orchards (NSTDB Land Cover, Open Government Licence - Nova Scotia) in "
                      "game metres. Made by tools/fetch_landcover.py.", "woods": woods}

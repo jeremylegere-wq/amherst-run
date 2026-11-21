@@ -302,6 +302,45 @@
         86
       ],
       "_note": "Hastings Rd house: front deck and steps (reference photos)"
+    },
+    {
+      "name": "Hastings Rd church",
+      "preset": "house",
+      "lat": 45.8233686,
+      "lon": -64.1219866,
+      "facing": 98.0,
+      "width": 7.6,
+      "depth": 10.4,
+      "height": 4.6,
+      "roof": "gable",
+      "roof_height": 3.0,
+      "material": "clapboard",
+      "colour": [
+        242,
+        242,
+        236
+      ],
+      "roof_colour": [
+        62,
+        64,
+        70
+      ],
+      "arch": "bungalow",
+      "front": 98.0,
+      "door_at": 0.5,
+      "door": [
+        248,
+        248,
+        244
+      ],
+      "front_windows": false,
+      "plaque": [
+        52,
+        54,
+        60
+      ],
+      "window_h": 2.0,
+      "_note": "Hastings Rd church (reference photos + LiDAR footprint): white clapboard meeting house, gable end and door to the road, plaque over the door, three tall windows a side"
     }
   ]
 }

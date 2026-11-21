@@ -269,6 +269,17 @@ class Game:
         setattr(self, '_start_held', self._joy_btn(self._BTN_START))
 
     # --- simulation --------------------------------------------------------
+
+    def _easter_eggs(self, world, car):
+        """Hand-placed props with a "caption" (map_edits.json) say it once when you stop beside them."""
+        seen = self.__dict__.setdefault("_eggs_seen", set())
+        if abs(car.speed) > 2.0:
+            return
+        for p in world.props_near(car.x, car.y, 16.0) if hasattr(world, "props_near") else ():
+            key = (p["kind"], p["x"], p["y"])
+            if p.get("caption") and key not in seen and math.hypot(p["x"] - car.x, p["y"] - car.y) < 16.0:
+                seen.add(key)
+                self.missions._say(p["caption"], (236, 236, 244))
     def step(self, dt, inputs):
         car, world, town = self.car, self.world, self.town
         if town.state != "playing":
@@ -287,6 +298,7 @@ class Game:
             for c in town.cars:
                 self.train.push_out(c)
         self.missions.update(dt, car)
+        self._easter_eggs(world, car)
         self.street.update(world, car, dt)
         if town.consume_reset():
             town.reset()

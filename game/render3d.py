@@ -256,6 +256,8 @@ def graffiti_ok(b, area):
     kind = b.get("tags", {}).get("building", "")
     if b.get("landmark"):
         return False
+    if b.get("arch") or b.get("material") == "clapboard":
+        return False                                       # hand-modelled homes and wooden siding: no tags
     if b.get("material"):
         return True
     if kind in HOUSE_TAGS or kind in SMALL_TAGS:
@@ -539,6 +541,7 @@ class Renderer3D:
                   "plinth": b.get("plinth"), "dormers": int(b.get("dormers") or 0),
                   "front": b.get("front"), "door": b.get("door"), "door_at": b.get("door_at"),
                   "sidelights": b.get("sidelights"), "shutters": b.get("shutters"),
+                  "front_windows": b.get("front_windows"), "plaque": b.get("plaque"), "window_h": b.get("window_h"),
                   "axis": math.atan2(longest[3] - longest[1], longest[2] - longest[0]),
                   "roof": None}
             faces = roof_faces(pts, height, roof, b.get("roof_height", 0.0), b.get("ridge_across", False)) if roof else []
@@ -1151,7 +1154,7 @@ class Renderer3D:
             if pr:
                 pygame.draw.polygon(layer, rgba, pr[0])
         for p in self.world.props_near(cx, cy, 100.0, far=0) if hasattr(self.world, "props_near") else ():
-            if p["kind"] in ("lamp", "car_block") or p["kind"] in DETAIL_KINDS or (p["x"] - cx) * fhx + (p["y"] - cy) * fhy < -10.0:
+            if p["kind"] in ("lamp", "car_block", "fence") or p["kind"] in DETAIL_KINDS or (p["x"] - cx) * fhx + (p["y"] - cy) * fhy < -10.0:
                 continue
             ox, oy, rr = p["x"] + sdx * p["h"] * 0.6, p["y"] + sdy * p["h"] * 0.6, p["r"] * 0.9
             gz = self._g(p["x"], p["y"]) + 0.05
@@ -1457,6 +1460,9 @@ class Renderer3D:
                 info["door_rgb"] = tuple(ex["door"]) if ex.get("door") else None
                 info["sidelights"] = bool(ex.get("sidelights"))
                 info["shutters"] = tuple(ex["shutters"]) if ex.get("shutters") else None
+                info["front_windows"] = ex.get("front_windows") is not False
+                info["plaque"] = tuple(ex["plaque"]) if ex.get("plaque") else None
+                info["window_h"] = float(ex.get("window_h") or 1.3)
                 info["wrap_wall"] = None
                 if info.get("wrap") and info["front"] is not None:          # the veranda turns the corner: pick the side
                     n = len(walls)                                            # wall that sees a street sooner, else the longer
@@ -1579,12 +1585,16 @@ class Renderer3D:
             else:
                 rect(door_u - 0.6, door_u + 0.6, fh, dtop + 0.15, trim)
             rect(door_u - 0.48, door_u + 0.48, fh, dtop, self.col(door_rgb, sh, fog))
+            if house.get("plaque") and dtop + 1.2 < h:                       # a dark name plaque over the door
+                rect(door_u - 0.32, door_u + 0.32, dtop + 0.45, dtop + 1.1, self.col(house["plaque"], sh, fog))
         shutter = self.col(house["shutters"], sh, fog) if house.get("shutters") else None
         n = max(1, int((L - 0.8) / 2.7))
         ww = 1.2 if kind == "minihome" else 0.95
         sill = fh + (0.9 if kind == "minihome" else 0.85)
         for row in range(house["storeys"]):
-            z, wh = sill + row * 2.8, 1.3
+            if front and not house.get("front_windows", True):
+                break                                                       # e.g. a meeting house: door only
+            z, wh = sill + row * 2.8, house.get("window_h", 1.3)
             if z + wh > h - 0.25:                                           # low walls: a shorter window, set lower
                 if not front:
                     break                                                   # front only: bungalows are many (cost)
@@ -1985,6 +1995,19 @@ class Renderer3D:
                 self._draw_frustum(surf, fr, (-w0, w0, -w0, w0), (-w1, w1, -w1, w1), z0, z1, c, c, fog, ink)
             self._draw_box(surf, fr, -0.85, 0.85, -0.85, 0.85, 8.6, 9.7, (255, 236, 140), (255, 236, 140), fog, ink)
             self._draw_frustum(surf, fr, (-1.05, 1.05, -1.05, 1.05), (-0.1, 0.1, -0.1, 0.1), 9.7, 10.6, red, red, fog, ink)
+        elif p["kind"] == "horse":
+            self._draw_horse(surf, p, fog, ink)
+        elif p["kind"] == "gravestone":                       # one flat slab face, the side toward the camera
+            hd = p.get("heading", 0.0)
+            fx, fy = math.cos(hd), math.sin(hd)
+            w = p.get("w", 0.7) / 2
+            t = 0.08 if (self.cx - x) * fx + (self.cy - y) * fy > 0 else -0.08
+            bx, by = x + fx * t, y + fy * t
+            self._poly(surf, [(bx + fy * w, by - fx * w, 0.0), (bx - fy * w, by + fx * w, 0.0),
+                              (bx - fy * w, by + fx * w, h), (bx + fy * w, by - fx * w, h)],
+                       self.col(tuple(p.get("colour") or (120, 122, 128)), 2, fog), ink)
+        elif p["kind"] == "fence":
+            self._draw_fence(surf, p, fog, ink)
         elif p["kind"] in DETAIL_KINDS:
             self._draw_furniture(surf, p, fog, ink, dist)
         else:
@@ -2009,6 +2032,61 @@ class Renderer3D:
         self._emit(surf, k, rgb, ink)
         if outline is not None and R > 2.5:
             pygame.draw.polygon(surf, outline, [(c[0] + (px - c[0]) * 0.72, c[1] + (py - c[1]) * 0.72) for px, py in k], 1)
+
+    def _draw_fence(self, surf, p, fog, ink):
+        """One piece of a white rail fence: a post at its start (and end, for the last piece) and two rails."""
+        (ax, ay), (bx, by) = p["a"], p["b"]
+        L = math.hypot(bx - ax, by - ay)
+        if L < 0.1:
+            return
+        c = self.col(tuple(p.get("colour") or (244, 244, 238)), 2, fog)
+        h = p["h"]
+        for z in (h * 0.45, h * 0.85):                     # rails: one flat face each
+            self._poly(surf, [(ax, ay, z - 0.07), (bx, by, z - 0.07), (bx, by, z + 0.07), (ax, ay, z + 0.07)], c, ink)
+        for px, py in (((ax, ay), (bx, by)) if p.get("last") else ((ax, ay),)):
+            post = self._billboard(px, py, 0.0, h + 0.1, 0.07)
+            if post:
+                self._emit(surf, post, c, ink)
+
+    def _draw_horse(self, surf, p, fog, ink):
+        """A black horse at full gallop with all four hooves off the ground: a frozen moment (p["lift"] metres up).
+        Each part is a side profile (a = forward, z = up) pushed out sideways (b = to the horse's right)."""
+        fx, fy = math.cos(p.get("heading", 0.0)), math.sin(p.get("heading", 0.0))
+        rx, ry = -fy, fx
+        x, y, lift = p["x"], p["y"], p.get("lift", 0.3)
+        coat = tuple(p.get("colour") or (30, 28, 34))
+        leg = tuple(max(0, v - 12) for v in coat)
+        right_seen = (self.cx - x) * rx + (self.cy - y) * ry > 0
+        front_seen = (self.cx - x) * fx + (self.cy - y) * fy > 0
+
+        def P(a, b, z):
+            return (x + fx * a + rx * b, y + fy * a + ry * b, z + lift)
+
+        def slab(profile, b0, b1, rgb):
+            near, far = (b1, b0) if right_seen else (b0, b1)
+            self._poly(surf, [P(a, far, z) for a, z in profile], self.col(rgb, 1, fog), ink)
+            for (a0, z0), (a1, z1) in zip(profile, profile[1:] + profile[:1]):
+                self._poly(surf, [P(a0, b0, z0), P(a1, b0, z1), P(a1, b1, z1), P(a0, b1, z0)], self.col(rgb, 3, fog), ink)
+            self._poly(surf, [P(a, near, z) for a, z in profile], self.col(rgb, 2, fog), ink)
+
+        legs = {   # side -> (front leg, hind leg) profiles
+            1: ([(0.75, 1.2), (0.92, 1.15), (1.58, 0.45), (1.46, 0.36)],                          # front: reaching
+                [(-0.78, 1.2), (-0.56, 1.2), (-1.42, 0.46), (-1.58, 0.52)]),                       # hind: stretched
+            -1: ([(0.52, 1.2), (0.72, 1.15), (0.98, 0.76), (0.74, 0.52), (0.64, 0.6), (0.8, 0.8)],  # front: folded
+                 [(-0.62, 1.2), (-0.44, 1.15), (-0.04, 0.62), (-0.16, 0.52)]),                     # hind: gathering
+        }
+        body = [(-0.95, 1.1), (0.85, 1.05), (1.0, 1.45), (0.75, 1.7), (-0.85, 1.66), (-1.06, 1.42)]
+        neck = [(0.58, 1.42), (0.96, 1.36), (1.36, 1.96), (1.1, 2.22)]
+        head = [(1.05, 2.02), (1.32, 2.28), (1.82, 1.86), (1.74, 1.68)]
+        tail = [(-0.94, 1.56), (-1.06, 1.64), (-1.62, 1.26), (-1.56, 1.14)]
+        far_side = -1 if right_seen else 1
+        for prof in legs[far_side]:                                       # far legs, behind the body
+            slab(prof, far_side * 0.2 - 0.06, far_side * 0.2 + 0.06, leg)
+        parts = [(tail, -0.05, 0.05), (body, -0.27, 0.27), (neck, -0.15, 0.15), (head, -0.12, 0.12)]
+        for prof, b0, b1 in (parts if front_seen else parts[::-1]):
+            slab(prof, b0, b1, coat)
+        for prof in legs[-far_side]:                                      # near legs, in front of the body
+            slab(prof, -far_side * 0.2 - 0.06, -far_side * 0.2 + 0.06, leg)
 
     def _draw_furniture(self, surf, p, fog, ink, dist):
         """Stop signs, signals, rail crossing signs, hydrants, benches and bins: small chunky shapes."""

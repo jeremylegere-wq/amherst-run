@@ -10,6 +10,14 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 ## [Unreleased]
 
 ### Added
+- The map reaches further north-east (Highway 6 out toward Warren, Tyndal Road, East Amherst): 167 more road pieces
+  and 350 LiDAR-found homes and outbuildings. The land-cover woods are downloaded for the whole map, so they cover it.
+- The old church on Hastings Rd (reference photos, LiDAR footprint): a white clapboard meeting house with its gable
+  end and door to the road, a plaque over the door, tall side windows, a graveyard and its big trees. Easter egg: stop
+  by the white fence out front.
+- Hand-placed scenery in `map_edits.json` props: `horse`, `gravestone`, and `fence` (from `lat`/`lon` to
+  `lat2`/`lon2`); a prop with a `caption` says it once when you stop beside it. House fields `front_windows`,
+  `plaque`, `window_h`.
 - The map now reaches east of town around the rural loop: Church St out to Highway 204, Hastings Rd round to
   Highway 6 and back in along Victoria St E (383 new road pieces, joined to the town's roads). `tools/extend_map.py`
   grows the map without moving its origin, so map edits, heights and addresses still line up, and a re-download
@@ -41,6 +49,8 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 - Low single-storey walls get (shorter) windows on the front instead of none, and doors stay below the eaves.
 
 ### Fixed
+- Hand-placed trees kept their position but got random sizes; they keep the `h` and `r` you give them now.
+- Clapboard houses (including the hand-modelled ones) could get graffiti tags.
 - A door in the middle of a long wall could vanish where the wall is cut into pieces for drawing.
 
 ## [0.2.1] - 2026-11-17

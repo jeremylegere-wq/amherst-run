@@ -23,7 +23,8 @@ TOLERANCE = 3.0                     # metres: how far the map may have moved sin
 ROAD_FIELDS = ("type", "width", "name", "speed", "rc", "lanes", "oneway", "surface", "service", "ref")
 BUILDING_FIELDS = ("height", "material", "colour", "roof", "roof_height", "roof_colour", "landmark", "label", "role",
                    "chimney", "ridge_across", "arch", "tower", "steeple", "storeys", "shopfront", "dormers", "plinth",
-                   "front", "door", "door_at", "sidelights", "shutters")   # house details: see Renderer3D._house
+                   "front", "door", "door_at", "sidelights", "shutters",
+                   "front_windows", "plaque", "window_h")   # house details: see Renderer3D._house
 MIN_OVERLAP = 0.35                  # metres of intrusion before something counts as overlapping (walls touch in rows)
 
 
@@ -94,8 +95,11 @@ def _apply_props(data, props):
         xy = _project(data.get("meta", {}), p["lat"], p["lon"])
         if xy is None:
             return "prop edits skipped: the map has no origin"
-        q = {k: v for k, v in p.items() if k not in ("lat", "lon") and not k.startswith("_")}
+        q = {k: v for k, v in p.items() if k not in ("lat", "lon", "lat2", "lon2") and not k.startswith("_")}
         q["x"], q["y"] = round(xy[0], 2), round(xy[1], 2)
+        if "lat2" in p:                                           # a fence runs from (lat, lon) to (lat2, lon2)
+            x2, y2 = _project(data.get("meta", {}), p["lat2"], p["lon2"])
+            q["x2"], q["y2"] = round(x2, 2), round(y2, 2)
         data.setdefault("props", []).append(q)
         n += 1
     return "props added: %d" % n

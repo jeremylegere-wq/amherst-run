@@ -27,6 +27,8 @@ WOODS_CELL_CAP = 8        # most streamed woods trees in one 40 m prop cell (~1 
                           # 130 m draw radius with ~300 trees, about what the renderer can afford)
 WOODS_CLEAR = 1.5         # woods trees keep this far from a road edge
 MONUMENTS = {"cenotaph": (6.0, 1.4), "lighthouse": (10.6, 1.6)}   # kind -> (height, radius)
+SCENERY = {"horse": (2.2, 1.2, 0.9), "gravestone": (0.9, 0.4, 0.3), "fence": (1.3, 0.0, 0.0)}   # kind -> (h, r, cr)
+FENCE_PIECE = 4.0          # metres: long fences are cut into pieces so each sorts where it really is
 TREE_PROB = {"main": 0.6, "side": 0.7, "lane": 0.35}
 
 
@@ -95,6 +97,28 @@ def _lamp(x, y, dx, dy):
             "c": 0, "dx": dx, "dy": dy}
 
 
+def _scenery(p):
+    """Hand-placed horse, gravestone or fence: defaults filled in; a fence (x, y) -> (x2, y2) cut into pieces."""
+    h, r, cr = SCENERY[p["kind"]]
+    base = {"h": h, "r": r, "cr": cr, "c": 0}
+    base.update({k: v for k, v in p.items() if not k.startswith("_")})
+    if "bearing" in base:                                    # compass degrees the front faces -> map heading
+        b = math.radians(base.pop("bearing"))
+        base["heading"] = round(math.atan2(-math.cos(b), math.sin(b)), 4)
+    if p["kind"] != "fence":
+        return [base]
+    x0, y0, x1, y1 = float(p["x"]), float(p["y"]), float(p["x2"]), float(p["y2"])
+    L = math.hypot(x1 - x0, y1 - y0)
+    n = max(1, math.ceil(L / FENCE_PIECE))
+    out = []
+    for k in range(n):
+        ax, ay = x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n
+        bx, by = x0 + (x1 - x0) * (k + 1) / n, y0 + (y1 - y0) * (k + 1) / n
+        out.append(dict(base, x=round((ax + bx) / 2, 2), y=round((ay + by) / 2, 2),
+                        a=[round(ax, 2), round(ay, 2)], b=[round(bx, 2), round(by, 2)], last=k == n - 1))
+    return out
+
+
 def build_props(world, osm_props=(), seed=1, procedural=True):
     """Return the list of props for a world (OSM ones first, then procedural)."""
     rng = random.Random(seed * 7919 + 3)
@@ -105,7 +129,12 @@ def build_props(world, osm_props=(), seed=1, procedural=True):
         x, y = float(p["x"]), float(p["y"])
         kind = p.get("kind")
         if kind == "tree" and _site_ok(world, x, y, 0.4, 0.8) and spacing.free(x, y):
-            props.append(_tree(rng, x, y))
+            t = _tree(rng, x, y)
+            t.update({k: p[k] for k in ("h", "r", "c") if k in p})          # a hand-placed tree keeps its size
+            props.append(t)
+        elif kind in SCENERY:                                                # hand-placed scenery (map_edits.json)
+            props.extend(_scenery(p))
+            continue
         elif kind == "lamp" and _site_ok(world, x, y, 0.2, 0.2) and spacing.free(x, y):
             props.append(_lamp(x, y, 0.0, 0.0))
         elif kind in streetdetail.FURNITURE_KINDS and "h" in p:             # signs, signals, hydrants... made from map marks

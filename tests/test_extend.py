@@ -157,3 +157,55 @@ class ParkedCarsAndHouseDetails(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Scenery(unittest.TestCase):
+    """Hand-placed horse, gravestones and fences (map_edits.json props), and hand-placed tree sizes."""
+
+    def test_fence_is_cut_into_pieces_along_its_line(self):
+        from game import props as PR
+        pieces = PR._scenery({"kind": "fence", "x": 0.0, "y": 0.0, "x2": 10.0, "y2": 0.0})
+        self.assertEqual(len(pieces), 3)
+        self.assertEqual(pieces[0]["a"], [0.0, 0.0])
+        self.assertEqual(pieces[-1]["b"], [10.0, 0.0])
+        self.assertTrue(pieces[-1]["last"] and not pieces[0]["last"])
+        self.assertEqual(pieces[0]["cr"], 0.0)                               # drive through it
+
+    def test_bearing_becomes_heading_and_horse_is_solid(self):
+        from game import props as PR
+        horse = PR._scenery({"kind": "horse", "x": 1.0, "y": 2.0, "bearing": 90.0})[0]
+        self.assertAlmostEqual(math.cos(horse["heading"]), 1.0, places=3)   # east = +x
+        self.assertGreater(horse["cr"], 0.5)
+
+    def test_hand_tree_keeps_its_size(self):
+        from game import props as PR
+        data = make_sample_map.build()
+        data["buildings"] = []
+        data["roads"] = [{"type": "side", "width": 8, "name": "Elm St", "points": [[-200, 0], [200, 0]]}]
+        got = PR.build_props(World(data), [{"kind": "tree", "x": 0.0, "y": 30.0, "h": 14.0, "r": 4.5}], procedural=False)
+        self.assertEqual((got[0]["h"], got[0]["r"]), (14.0, 4.5))
+
+    def test_scenery_draws_in_both_styles(self):
+        pygame.init()
+        data = make_sample_map.build()
+        data["roads"] = [{"type": "side", "width": 8, "name": "Elm St", "points": [[-200, 0], [200, 0]]}]
+        data["props"] = [{"kind": "horse", "x": 0.0, "y": 12.0, "heading": 0.0, "lift": 0.3},
+                         {"kind": "gravestone", "x": 4.0, "y": 14.0, "h": 0.9},
+                         {"kind": "fence", "x": -10.0, "y": 8.0, "x2": 10.0, "y2": 8.0}]
+        world = World(data)
+        kinds = {p["kind"] for p in world.props_near(0.0, 12.0, 30.0)}
+        self.assertTrue({"horse", "gravestone", "fence"} <= kinds)
+        for style in R.STYLES:
+            r = R.Renderer3D(world, style=style)
+            car = Car(-6.0, 2.0, 0.6)
+            cam = R.ChaseCamera(car, world)
+            surf = pygame.Surface((C.INTERNAL_W, C.INTERNAL_H))
+            r.render(surf, car, cam)
+            dark = {r.col((30, 28, 34), s, f) for s in range(4) for f in range(3)}
+            got = {tuple(surf.get_at((x, y)))[:3] for x in range(0, surf.get_width(), 2) for y in range(0, surf.get_height(), 2)}
+            self.assertTrue(got & dark, "no horse in the %s style" % style)
+
+    def test_no_graffiti_on_clapboard_or_hand_modelled_homes(self):
+        self.assertFalse(R.graffiti_ok({"material": "clapboard"}, 500))
+        self.assertFalse(R.graffiti_ok({"material": "brick", "arch": "two_storey"}, 500))
+        self.assertTrue(R.graffiti_ok({"material": "brick"}, 500))

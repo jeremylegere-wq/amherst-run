@@ -46,7 +46,8 @@ def load_styles(path=STYLES_PATH):
 STYLES = load_styles()
 ROOFS = ("flat", "gable", "hip", "mansard", "cone")
 PASS_THROUGH = ("dormers", "plinth", "arch", "storeys", "shopfront", "tower", "steeple", "ridge_across",
-                "front", "door", "door_at", "sidelights", "shutters")
+                "front", "door", "door_at", "sidelights", "shutters",
+                "front_windows", "plaque", "window_h")
 ROOF_COLOURS = {"slate": (74, 80, 100), "shingle": (126, 66, 58), "copper": (74, 140, 120), "tin": (150, 156, 166)}
 DEFAULT_ROOF_COLOUR = {"mansard": "slate", "gable": "shingle", "hip": "shingle", "cone": "slate"}
 MAX_SIZE = 200.0   # malls are ~175 m wide

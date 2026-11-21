@@ -3244,6 +3244,35 @@
     ]
    },
    {
+    "height": 2.9,
+    "material": "clapboard",
+    "colour": [
+     150,
+     154,
+     158
+    ],
+    "roof": "gable",
+    "roof_height": 1.7,
+    "roof_colour": [
+     62,
+     64,
+     70
+    ],
+    "arch": "bungalow",
+    "front": 152.0,
+    "door": [
+     246,
+     246,
+     242
+    ],
+    "door_at": 0.5,
+    "at": [
+     6293.83,
+     2961.68
+    ],
+    "_note": "Hastings Rd house (reference photos + LiDAR footprint): grey single storey, low gable, deck and steps out front, gravel loop drive"
+   },
+   {
     "points": [
      [
       6399.26,
@@ -3577,6 +3606,30 @@
     "at": [
      4792.1,
      2796.08
+    ]
+   },
+   {
+    "points": [
+     [
+      4895.25,
+      2863.57
+     ],
+     [
+      4887.55,
+      2871.97
+     ],
+     [
+      4881.55,
+      2866.57
+     ],
+     [
+      4889.25,
+      2858.17
+     ]
+    ],
+    "at": [
+     4886.05,
+     2866.5
     ]
    },
    {
@@ -4572,33 +4625,196 @@
     ]
    },
    {
+    "points": [
+     [
+      6681.64,
+      -4524.48
+     ],
+     [
+      6667.64,
+      -4521.78
+     ],
+     [
+      6665.84,
+      -4531.08
+     ],
+     [
+      6679.84,
+      -4533.78
+     ]
+    ],
     "at": [
-     6293.83,
-     2961.68
+     6673.2,
+     -4525.6
+    ]
+   },
+   {
+    "points": [
+     [
+      6618.14,
+      -4400.73
+     ],
+     [
+      6605.14,
+      -4406.23
+     ],
+     [
+      6609.64,
+      -4416.73
+     ],
+     [
+      6622.64,
+      -4411.23
+     ]
     ],
-    "height": 2.9,
-    "material": "clapboard",
-    "colour": [
-     150,
-     154,
-     158
+    "at": [
+     6615.25,
+     -4406.4
+    ]
+   },
+   {
+    "points": [
+     [
+      10838.19,
+      -3154.68
+     ],
+     [
+      10830.79,
+      -3160.28
+     ],
+     [
+      10834.79,
+      -3165.38
+     ],
+     [
+      10842.09,
+      -3159.78
+     ]
     ],
-    "roof": "gable",
-    "roof_height": 1.7,
-    "roof_colour": [
-     62,
-     64,
-     70
+    "at": [
+     10835.17,
+     -3160.05
+    ]
+   },
+   {
+    "points": [
+     [
+      8459.8,
+      -3043.58
+     ],
+     [
+      8461.6,
+      -3032.28
+     ],
+     [
+      8454.0,
+      -3031.08
+     ],
+     [
+      8452.3,
+      -3042.48
+     ]
     ],
-    "arch": "bungalow",
-    "front": 152.0,
-    "door_at": 0.5,
-    "door": [
-     246,
-     246,
-     242
+    "at": [
+     8458.42,
+     -3036.28
+    ]
+   },
+   {
+    "points": [
+     [
+      2474.93,
+      1990.66
+     ],
+     [
+      2479.63,
+      2005.26
+     ],
+     [
+      2472.13,
+      2007.66
+     ],
+     [
+      2467.43,
+      1993.16
+     ]
     ],
-    "_note": "Hastings Rd house (reference photos + LiDAR footprint): grey single storey, low gable, deck and steps out front, gravel loop drive"
+    "at": [
+     2470.9,
+     1996.03
+    ]
+   },
+   {
+    "points": [
+     [
+      11280.5,
+      -3214.72
+     ],
+     [
+      11282.6,
+      -3206.12
+     ],
+     [
+      11276.8,
+      -3204.72
+     ],
+     [
+      11274.7,
+      -3213.32
+     ]
+    ],
+    "at": [
+     11279.95,
+     -3212.5
+    ]
+   },
+   {
+    "points": [
+     [
+      11294.1,
+      -3200.02
+     ],
+     [
+      11288.9,
+      -3204.42
+     ],
+     [
+      11291.9,
+      -3208.02
+     ],
+     [
+      11297.1,
+      -3203.62
+     ]
+    ],
+    "at": [
+     11291.5,
+     -3203.9
+    ]
+   },
+   {
+    "points": [
+     [
+      8820.4,
+      102.24
+     ],
+     [
+      8826.8,
+      109.64
+     ],
+     [
+      8822.8,
+      113.24
+     ],
+     [
+      8816.3,
+      105.74
+     ]
+    ],
+    "at": [
+     8821.77,
+     109.07
+    ]
    }
   ]
  },
@@ -4994,8 +5210,8 @@
     "name": "",
     "speed": 20,
     "rc": "LO",
-    "service": "driveway",
     "surface": "gravel",
+    "service": "driveway",
     "points": [
      [
       6322.61,
@@ -5025,8 +5241,7 @@
       6300.44,
       3006.07
      ]
-    ],
-    "_note": "Hastings Rd house: gravel loop driveway"
+    ]
    }
   ]
  },
@@ -5277,6 +5492,396 @@
     "cr": 0.4,
     "c": 2,
     "_note": "Hastings Rd house: tree from the LiDAR canopy around the clearing"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.823305,
+    "lon": -64.1220777,
+    "bearing": 94.35834114561433,
+    "h": 1.05,
+    "w": 0.82,
+    "colour": [
+     150,
+     86,
+     80
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8232821,
+    "lon": -64.1220803,
+    "bearing": 97.91617658434133,
+    "h": 0.92,
+    "w": 0.6,
+    "colour": [
+     214,
+     214,
+     208
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8232615,
+    "lon": -64.1220829,
+    "bearing": 102.35174186978887,
+    "h": 1.02,
+    "w": 0.88,
+    "colour": [
+     128,
+     130,
+     136
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.823302,
+    "lon": -64.1220458,
+    "bearing": 99.11177896091942,
+    "h": 0.95,
+    "w": 0.72,
+    "colour": [
+     96,
+     98,
+     104
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8232793,
+    "lon": -64.1220472,
+    "bearing": 94.53283163793536,
+    "h": 0.73,
+    "w": 0.87,
+    "colour": [
+     58,
+     60,
+     66
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8232584,
+    "lon": -64.1220451,
+    "bearing": 101.89800887929862,
+    "h": 0.68,
+    "w": 0.57,
+    "colour": [
+     128,
+     130,
+     136
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8232993,
+    "lon": -64.1219982,
+    "bearing": 93.93201636674476,
+    "h": 0.99,
+    "w": 0.76,
+    "colour": [
+     58,
+     60,
+     66
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8232731,
+    "lon": -64.1220121,
+    "bearing": 96.48837238492797,
+    "h": 1.0,
+    "w": 0.83,
+    "colour": [
+     214,
+     214,
+     208
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8232494,
+    "lon": -64.1220087,
+    "bearing": 94.07767965239417,
+    "h": 0.81,
+    "w": 0.82,
+    "colour": [
+     150,
+     86,
+     80
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8232948,
+    "lon": -64.1219589,
+    "bearing": 101.37123747028163,
+    "h": 0.9,
+    "w": 0.73,
+    "colour": [
+     214,
+     214,
+     208
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8232723,
+    "lon": -64.1219635,
+    "bearing": 99.44945658622889,
+    "h": 0.9,
+    "w": 0.55,
+    "colour": [
+     58,
+     60,
+     66
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8232478,
+    "lon": -64.1219732,
+    "bearing": 97.64469848180862,
+    "h": 1.04,
+    "w": 0.85,
+    "colour": [
+     214,
+     214,
+     208
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8234402,
+    "lon": -64.1220044,
+    "bearing": 99.62863063261548,
+    "h": 0.76,
+    "w": 0.52,
+    "colour": [
+     96,
+     98,
+     104
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8234632,
+    "lon": -64.1220089,
+    "bearing": 94.71862350624338,
+    "h": 0.61,
+    "w": 0.82,
+    "colour": [
+     214,
+     214,
+     208
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8234426,
+    "lon": -64.1219757,
+    "bearing": 103.5410372139297,
+    "h": 0.67,
+    "w": 0.74,
+    "colour": [
+     96,
+     98,
+     104
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8234617,
+    "lon": -64.1219613,
+    "bearing": 103.68220055006827,
+    "h": 0.99,
+    "w": 0.65,
+    "colour": [
+     214,
+     214,
+     208
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.823434,
+    "lon": -64.121941,
+    "bearing": 100.47208969784586,
+    "h": 0.91,
+    "w": 0.53,
+    "colour": [
+     214,
+     214,
+     208
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8234599,
+    "lon": -64.1219322,
+    "bearing": 102.99508126229493,
+    "h": 1.04,
+    "w": 0.62,
+    "colour": [
+     150,
+     86,
+     80
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8234288,
+    "lon": -64.1218909,
+    "bearing": 95.09879164879004,
+    "h": 0.9,
+    "w": 0.79,
+    "colour": [
+     150,
+     86,
+     80
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8234576,
+    "lon": -64.1218837,
+    "bearing": 103.44998810782589,
+    "h": 0.79,
+    "w": 0.64,
+    "colour": [
+     128,
+     130,
+     136
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8233977,
+    "lon": -64.1218637,
+    "bearing": 97.99157702312564,
+    "h": 0.79,
+    "w": 0.59,
+    "colour": [
+     58,
+     60,
+     66
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8234225,
+    "lon": -64.1218393,
+    "bearing": 94.74889291365305,
+    "h": 0.72,
+    "w": 0.66,
+    "colour": [
+     150,
+     86,
+     80
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "gravestone",
+    "lat": 45.8232967,
+    "lon": -64.1219029,
+    "bearing": 96.6363384596944,
+    "h": 0.66,
+    "w": 0.79,
+    "colour": [
+     150,
+     86,
+     80
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): graveyard"
+   },
+   {
+    "kind": "tree",
+    "lat": 45.823284,
+    "lon": -64.1218911,
+    "h": 14.0,
+    "r": 5.0,
+    "cr": 0.5,
+    "c": 2,
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): big tree from the LiDAR canopy"
+   },
+   {
+    "kind": "tree",
+    "lat": 45.8236438,
+    "lon": -64.1220202,
+    "h": 13.0,
+    "r": 3.6,
+    "cr": 0.5,
+    "c": 2,
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): big tree from the LiDAR canopy"
+   },
+   {
+    "kind": "tree",
+    "lat": 45.8236168,
+    "lon": -64.1218847,
+    "h": 12.5,
+    "r": 3.4,
+    "cr": 0.5,
+    "c": 2,
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): big tree from the LiDAR canopy"
+   },
+   {
+    "kind": "tree",
+    "lat": 45.823302,
+    "lon": -64.122188,
+    "h": 15.0,
+    "r": 4.0,
+    "cr": 0.5,
+    "c": 2,
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): big tree from the LiDAR canopy"
+   },
+   {
+    "kind": "fence",
+    "lat": 45.8231291,
+    "lon": -64.1217799,
+    "lat2": 45.8235387,
+    "lon2": -64.1216973,
+    "h": 1.3,
+    "colour": [
+     244,
+     244,
+     238
+    ],
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): white rail fence along the road"
+   },
+   {
+    "kind": "horse",
+    "lat": 45.8233217,
+    "lon": -64.1217997,
+    "bearing": 25.0,
+    "lift": 0.35,
+    "colour": [
+     30,
+     28,
+     34
+    ],
+    "caption": "TIME STANDS STILL",
+    "_note": "Hastings Rd church (reference photos + LiDAR footprint): easter egg - a black horse frozen mid-gallop beside the church, an original homage to Atlantic realist painting"
    }
   ]
  },
