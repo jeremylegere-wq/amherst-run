@@ -99,6 +99,14 @@ def nearest_road(roads, x, y, drivable_only=True):
     return best
 
 
+def _crosses_box(pts, x0, y0, x1, y1):
+    """True if any segment's own bounding box overlaps the box (a long straight road with no point inside it)."""
+    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+        if min(ax, bx) <= x1 and max(ax, bx) >= x0 and min(ay, by) <= y1 and max(ay, by) >= y0:
+            return True
+    return False
+
+
 def polygon_footprint(cx, cy, facing, width, sides):
     """Regular polygon (a round tower or bay drawn with `sides` flat faces) of diameter `width`, a face to the front."""
     out = []
@@ -248,7 +256,11 @@ def make_building(spec, meta, roads):
     sides = int(s.get("sides") or 4)
     pts = polygon_footprint(x, y, facing, s["width"], sides) if sides >= 5 else footprint(x, y, facing, s["width"], s["depth"])
     samples = list(pts) + [((a[0] + b[0]) / 2, (a[1] + b[1]) / 2) for a, b in zip(pts, pts[1:] + pts[:1])] + [(x, y)]
-    if roads and any(nearest_road(roads, px, py)[0] < 0.5 for px, py in samples):
+    bx0, by0 = min(p[0] for p in pts) - 50.0, min(p[1] for p in pts) - 50.0
+    bx1, by1 = max(p[0] for p in pts) + 50.0, max(p[1] for p in pts) + 50.0
+    near = [r for r in roads or () if any(bx0 <= q[0] <= bx1 and by0 <= q[1] <= by1 for q in r["points"])
+            or _crosses_box(r["points"], bx0, by0, bx1, by1)]       # only roads near this building (load time)
+    if near and any((nearest_road(near, px, py) or (1e9,))[0] < 0.5 for px, py in samples):
         warnings.append("overlaps a road - move it back or set \"setback\"")
     b = {"points": pts, "height": float(s["height"]), "custom": True,
          "tags": {"building": "yes", "custom": str(spec.get("name", spec.get("style") or spec.get("preset", "building")))}}

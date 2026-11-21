@@ -267,3 +267,67 @@ class ApplyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def with_overview(full, ov_tile, tw=4, th=4, ov_w=4, ov_h=2):
+    """`full` (a tiny_tiff) plus a second image directory: a 1-tile overview of ov_w x ov_h pixels (no geo tags)."""
+    full = bytearray(full)
+    n0 = struct.unpack("<H", full[8:10])[0]
+    next_at = 8 + 2 + n0 * 12                                     # where IFD 0 stores the offset of the next IFD
+    blob = np.asarray(ov_tile, dtype="<f4").tobytes()
+    blob_at = len(full)
+    full += blob
+    entries = [(256, 4, 1, ov_w), (257, 4, 1, ov_h), (258, 3, 1, 32), (259, 3, 1, 1), (277, 3, 1, 1),
+               (322, 4, 1, tw), (323, 4, 1, th), (324, 4, 1, blob_at), (325, 4, 1, len(blob)), (339, 3, 1, 3)]
+    ifd_at = len(full)
+    ifd = bytearray(struct.pack("<H", len(entries)))
+    for tag, typ, cnt, val in entries:
+        ifd += struct.pack("<HHIHH", tag, typ, cnt, val, 0) if typ == 3 else struct.pack("<HHII", tag, typ, cnt, val)
+    ifd += struct.pack("<I", 0)
+    full += ifd
+    full[next_at:next_at + 4] = struct.pack("<I", ifd_at)
+    return bytes(full)
+
+
+class OverviewTests(unittest.TestCase):
+    def test_level_one_reads_the_half_size_image_in_the_same_place(self):
+        full = tiny_tiff([np.full((4, 4), 10.0), np.full((4, 4), 20.0)], lzw=False)
+        ov = np.zeros((4, 4))
+        ov[:2, :2], ov[:2, 2:] = 11.0, 19.0                             # left half, right half of the area
+        data = with_overview(full, ov)
+        fetch = lambda url, a, b: data[a:b + 1]                        # noqa: E731
+        base = cog.COG("mem", fetch=fetch)
+        lvl = cog.COG("mem", fetch=fetch, level=1)
+        self.assertEqual((lvl.width, lvl.height), (4, 2))
+        self.assertAlmostEqual(lvl.sx, base.sx * 2)
+        self.assertEqual((lvl.x0, lvl.y0), (base.x0, base.y0))
+        x = np.array([base.x0 + 1.0, base.x0 + 6.0])
+        y = np.array([base.y0 - 1.0, base.y0 - 1.0])
+        self.assertEqual(list(base.sample(x, y)), [10.0, 20.0])
+        self.assertEqual(list(lvl.sample(x, y)), [11.0, 19.0])
+        with self.assertRaises(ValueError):
+            cog.COG("mem", fetch=fetch, level=2)
+
+
+class LidarGroundTests(unittest.TestCase):
+    def test_compressed_heights_round_trip_through_the_game(self):
+        import fetch_lidar_ground as FLG
+        from game.terrain import Terrain
+        h = np.array([0.0, 12.3, -4.5, 171.2, 33.3, 7.7])
+        t = Terrain.from_dict({"x0": 0, "y0": 0, "step": 12.5, "nx": 3, "ny": 2, "unit": 0.1,
+                               "h16z": FLG.encode(h)}, scale=1.0)
+        self.assertEqual([round(v, 1) for v in t.h], [round(v, 1) for v in h])
+        self.assertAlmostEqual(t.height(12.5, 0.0), 12.3, places=4)
+
+    def test_overpass_corridor_blends_in_the_smooth_ground(self):
+        from game.terrain import Terrain
+        lidar = Terrain(0, 0, 10.0, 21, 21, [10.0] * 441, scale=1.0)
+        for j in range(21):
+            lidar.h[j * 21 + 10] = 16.0                                 # an embankment along x = 100
+        smooth = Terrain(0, 0, 50.0, 5, 5, [10.0] * 25, scale=1.0)
+        weights = {}
+        lidar.blend_weights([(100, 0), (100, 200)], 8.0, 20.0, weights)
+        lidar.apply_blend(weights, smooth)
+        self.assertAlmostEqual(lidar.height(100, 100), 10.0, places=4)   # the embankment is gone under the road
+        self.assertAlmostEqual(lidar.height(150, 100), 10.0, places=4)   # far away: untouched
+        self.assertEqual(lidar.h[100 // 10 * 21 + 13], 10.0)

@@ -73,6 +73,25 @@ def _densify(points, step):
     return out
 
 
+CARVE_MARGIN = 14.0     # metres beside an overpass and its ramps where the ground is lowered to the road below
+CARVE_ALONG = 80.0      # metres each way along the road passing under an overpass that are lowered too
+CARVE_BLEND = 20.0      # metres over which that blends back into the LiDAR ground
+
+
+def _cross_point(a, b, c, d):
+    """Where segment a-b crosses segment c-d, or None."""
+    rx, ry = b[0] - a[0], b[1] - a[1]
+    sx, sy = d[0] - c[0], d[1] - c[1]
+    den = rx * sy - ry * sx
+    if abs(den) < 1e-9:
+        return None
+    t = ((c[0] - a[0]) * sy - (c[1] - a[1]) * sx) / den
+    u = ((c[0] - a[0]) * ry - (c[1] - a[1]) * rx) / den
+    if 0.0 <= t <= 1.0 and 0.0 <= u <= 1.0:
+        return (a[0] + rx * t, a[1] + ry * t)
+    return None
+
+
 def build_spans(roads):
     """Overpasses: every road with a 'lift' becomes a span = ramp up, flat deck, ramp down.
 
@@ -196,6 +215,8 @@ class World:
                 for c in _cells(_bbox([a, b])):
                     self._name_grid[c].append((a[0], a[1], b[0], b[1], r["width"], ri))
         self.spans = build_spans(self.roads)         # overpass decks and their approach ramps
+        if terrain is not None and getattr(terrain, "previous", None) is not None:
+            self._carve_overpasses(terrain)           # LiDAR ground has the bridge embankments: the spans bring their own
         self._span_grid = defaultdict(list)
         for sp in self.spans:
             for c in _cells(_bbox(sp["points"])):
@@ -232,6 +253,30 @@ class World:
         if procedural and self.woods:
             from .landcover import WoodsIndex
             self._woods_index = WoodsIndex(self.woods)
+
+    def _carve_overpasses(self, terrain):
+        """The bare-earth LiDAR includes bridge embankments, while each overpass builds its own deck and ramps on top
+        of the ground. So along each overpass and its ramps, and the road it crosses (CARVE_ALONG metres each way), the
+        ground is the smooth coarse grid the decks were made for (shifted to the LiDAR's datum), blended back into the
+        LiDAR over CARVE_BLEND metres."""
+        weights = {}
+        for sp in self.spans:
+            terrain.blend_weights(sp["points"], sp["width"] / 2.0 + CARVE_MARGIN, CARVE_BLEND, weights)
+            deck = sp["road"]["points"]
+            for r in self.roads:
+                if r is sp["road"] or r.get("lift"):
+                    continue
+                for a, b in zip(r["points"], r["points"][1:]):
+                    for c, d in zip(deck, deck[1:]):
+                        hit = _cross_point(a, b, c, d)
+                        if hit is None:
+                            continue
+                        L = math.hypot(b[0] - a[0], b[1] - a[1]) or 1.0
+                        ux, uy = (b[0] - a[0]) / L, (b[1] - a[1]) / L
+                        run = [(hit[0] - ux * CARVE_ALONG, hit[1] - uy * CARVE_ALONG),
+                               (hit[0] + ux * CARVE_ALONG, hit[1] + uy * CARVE_ALONG)]
+                        terrain.blend_weights(run, r["width"] / 2.0 + CARVE_MARGIN, CARVE_BLEND, weights)
+        terrain.apply_blend(weights, terrain.previous, terrain.previous_shift)
 
     @classmethod
     def load(cls, path, custom="auto", zoning=True, terrain=True):

@@ -15,7 +15,15 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
   ditches as water ribbons under the roads, land use as ground colour (farm fields, wetlands, meadows, grass, golf
   courses, sports pitches with their lines, cemeteries with rows of gravestones), and fences, walls and hedges.
 
+- Real ground shape from the 2020 LiDAR survey: heights every 12.5 m instead of 25 m from the bare-earth model
+  (`tools/fetch_lidar_ground.py`, which reads the survey's 8 m overview: about 20 tiles for the whole map). Road cuts,
+  the rail embankment, river banks and the dam's drop are real. The land is drawn in 25 m cells with the fine ones
+  within 75 m (about 20 more polygons a frame). Under overpasses the older smooth grid is blended in, because the
+  survey includes the bridge embankments while the game builds its own ramps and decks. `tools/cog.py` can now read a
+  GeoTIFF's overview levels.
+
 ### Fixed
+- Loading is faster: custom buildings only check the roads near them for overlaps, and the heights are decoded at once.
 - Hand-placed and mapped scenery no longer uses up the street-tree budget (it pushed out about 5,600 trees).
 
 ## [0.3.1] - 2026-11-21

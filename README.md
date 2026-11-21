@@ -255,10 +255,13 @@ are in `game/streetdetail.py`; the traffic rules at junctions (lights in step wi
 `game/junctions.py`.
 
 ### Hills (real elevation)
-Amherst is not flat. `data/elevation.json` (included) holds real ground heights every 25 m; the game draws the land, and
-roads, buildings, trees and cars sit on it, you speed up downhill and slow uphill. `--flat` ignores it (faster on slow
-machines). Refresh it with `python tools/fetch_elevation.py` (needs internet); `python update_map.py` fetches it the first
-time if it is missing.
+Amherst is not flat. `data/elevation.json` (included) holds real ground heights every 12.5 m from the 2020 LiDAR survey's
+bare-earth model (`python tools/fetch_lidar_ground.py` rebuilds it from the survey's 8 m overview): road cuts, the rail
+embankment, river banks and the drop at the Pumping Station dam are real shapes. The game draws the land in 25 m cells,
+split into the fine ones within 75 m of you; roads, buildings, trees and cars sit on it, and you speed up downhill and
+slow uphill. Under the highway overpasses the smooth older grid is used, since the game builds its own ramps and decks.
+`--flat` ignores the heights (faster on slow machines). `python tools/fetch_elevation.py` makes the older 25 m grid
+(Terrain Tiles); `python update_map.py` fetches it the first time if it is missing.
 `--radius 4000` limits it to the area around the spawn point; `--from-asc FILE` uses your own ESRI ASCII grid in
 latitude/longitude. Hills are stretched 1.5x (`VERTICAL_SCALE` in `game/terrain.py`) so they read on a small screen.
 

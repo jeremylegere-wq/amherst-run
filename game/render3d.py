@@ -195,6 +195,8 @@ PROP_DIST = 130.0         # trees and lamps further than this are not drawn
 MURAL_DIST = 160.0        # wall murals (game/murals.py) are painted on within this distance
 STALL_DIST = 45.0         # parking stall lines are painted within this distance
 WIRE_DIST = 140.0         # power line wires are drawn within this distance
+TERRAIN_CELL = 25.0       # metres: terrain mesh cells (a finer height grid is drawn in these, split up close)
+TERRAIN_NEAR = 75.0       # within this distance the fine cells of the height grid are drawn
 AREA_COLOURS = {          # OSM land use (game/extras.py); blended towards each style's park colour
     "grass": (110, 190, 84), "meadow": (150, 190, 92), "farmland": (196, 186, 118), "cemetery": (84, 150, 72),
     "pitch": (88, 194, 80), "playground": (206, 180, 130), "track": (190, 96, 72), "golf": (104, 204, 92),
@@ -907,19 +909,22 @@ class Renderer3D:
                 surf.fill(self.col(grass, 3, k), (0, top, W, H - top))
 
     def _draw_terrain(self, surf):
-        """The land itself as a mesh of grid cells, far to near, shaded by slope. Only drawn when the map has heights."""
+        """The land itself as a mesh of grid cells, far to near, shaded by slope. Only drawn when the map has heights.
+        A fine grid (the 12.5 m LiDAR ground) is drawn in cells of TERRAIN_CELL metres, each split into its fine cells
+        within TERRAIN_NEAR of the camera: the detail is where you look, the polygon count stays close to a 25 m mesh."""
         t = self.terrain
         if t is None:
             return
-        step = t.step
+        fine = t.step
+        k = max(1, int(round(TERRAIN_CELL / fine)))             # nodes per coarse cell
+        step = fine * k
         r = DRAW_DIST + step
         cx, cy = self.cx, self.cy
         i0, i1 = int((cx - r - t.x0) // step), int((cx + r - t.x0) // step) + 1
         j0, j1 = int((cy - r - t.y0) // step), int((cy + r - t.y0) // step) + 1
         i0, j0 = max(i0, -1), max(j0, -1)
-        i1, j1 = min(i1, t.nx), min(j1, t.ny)
-        flat_idx = shade_index(0.0, 0.0, 1.0)
-        grass = self.st["grass"]
+        i1, j1 = min(i1, (t.nx - 1) // k + 1), min(j1, (t.ny - 1) // k + 1)
+        near2 = TERRAIN_NEAR * TERRAIN_NEAR
         cells = []
         for j in range(j0, j1):
             for i in range(i0, i1):
@@ -931,16 +936,26 @@ class Renderer3D:
                 fwd = dx * self.fhx + dy * self.fhy
                 if fwd < -step or abs(dx * self.rx + dy * self.ry) > fwd * 0.95 + step * 1.5:
                     continue
-                cells.append((d2, i, j, mx, my))
+                if k > 1 and d2 < near2:                        # close: its fine cells instead
+                    for jj in range(j * k, j * k + k):
+                        for ii in range(i * k, i * k + k):
+                            fx, fy = t.x0 + (ii + 0.5) * fine - cx, t.y0 + (jj + 0.5) * fine - cy
+                            cells.append((fx * fx + fy * fy, ii, jj, 1))
+                else:
+                    cells.append((d2, i, j, k))
         cells.sort(reverse=True)
-        for _d2, i, j, mx, my in cells:
-            x0, y0 = t.x0 + i * step, t.y0 + j * step
-            x1, y1 = x0 + step, y0 + step
-            a, b, c, d = t.node(i, j), t.node(i + 1, j), t.node(i, j + 1), t.node(i + 1, j + 1)  # corners are nodes
+        flat_idx = shade_index(0.0, 0.0, 1.0)
+        grass = self.st["grass"]
+        for _d2, i, j, n in cells:
+            s = fine * n
+            x0, y0 = t.x0 + i * s, t.y0 + j * s
+            x1, y1 = x0 + s, y0 + s
+            a, b = t.node(i * n, j * n), t.node(i * n + n, j * n)
+            c, d = t.node(i * n, j * n + n), t.node(i * n + n, j * n + n)       # corners are nodes
             pts = [(x0, y0, a), (x1, y0, b), (x1, y1, d), (x0, y1, c)]
-            idx = shade_index(*t.cell_normal(a, b, c, d))
+            idx = shade_index(*t.cell_normal(a, b, c, d, s))
             sh = max(0, min(3, 3 + idx - flat_idx))
-            if (i + j) & 1 and sh > 1:
+            if ((i * n + j * n) // n) & 1 and sh > 1:
                 sh -= 1                                         # faint chequer so a gentle slope still reads as 3D
             self._poly_fog(surf, pts, grass, sh)
 

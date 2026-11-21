@@ -78,8 +78,13 @@ def lcc3979(lat, lon):
 
 # ----------------------------------------------------------------------------- COG over HTTP
 class COG:
-    def __init__(self, url, fetch=None, cache_dir=None, name="grid"):
+    def __init__(self, url, fetch=None, cache_dir=None, name="grid", level=0):
+        """level 0 = full resolution; 1, 2, 3... = the file's overviews (each halves the resolution: a 1 m model's
+        level 3 has 8 m pixels). Each level keeps its own tile cache (cache_dir/L<level>)."""
         self.url = url
+        self.level = level
+        if cache_dir and level:
+            cache_dir = os.path.join(cache_dir, "L%d" % level)
         self.fetch = fetch or self._http
         self.cache_dir = cache_dir                      # decoded tiles are kept here as .npy (optional)
         self.name = name
@@ -87,7 +92,7 @@ class COG:
             os.makedirs(cache_dir, exist_ok=True)
         self.tiles = {}
         self.bytes_read = 0
-        head = self.fetch(url, 0, 65535)
+        head = self.fetch(url, 0, 65535 if level == 0 else 262143)
         self._parse(head)
 
     def _http(self, url, start, end, tries=6):
@@ -114,6 +119,19 @@ class COG:
         bo = "<" if b[:2] == b"II" else ">"
         big = struct.unpack(bo + "H", b[2:4])[0] == 43
         off = struct.unpack(bo + "Q", b[8:16])[0] if big else struct.unpack(bo + "I", b[4:8])[0]
+        first = self._parse_ifd(b, off, bo, big)
+        tags = first
+        for _ in range(self.level):                       # walk the chain of image directories to the overview
+            n = struct.unpack(bo + ("Q" if big else "H"), b[off:off + (8 if big else 2)])[0]
+            esz, nsz = (20, 8) if big else (12, 2)
+            at = off + nsz + n * esz
+            off = struct.unpack(bo + ("Q" if big else "I"), b[at:at + (8 if big else 4)])[0]
+            if not off or off >= len(b):
+                raise ValueError("this GeoTIFF has no overview level %d" % self.level)
+            tags = self._parse_ifd(b, off, bo, big)
+        self._setup(tags, first, bo, big)
+
+    def _parse_ifd(self, b, off, bo, big):
         n = struct.unpack(bo + ("Q" if big else "H"), b[off:off + (8 if big else 2)])[0]
         p, esz = off + (8 if big else 2), (20 if big else 12)
         sizes = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 11: 4, 12: 8, 16: 8}
@@ -132,9 +150,15 @@ class COG:
                 at = struct.unpack(bo + ("Q" if big else "I"), val[:inline])[0]
                 raw = b[at:at + total] if at + total <= len(b) else None
             tags[tag] = (typ, cnt, raw, at)
+        return tags
 
-        def val(tag):
-            typ, cnt, raw, _at = tags[tag]
+    def _setup(self, tags, first, bo, big):
+        """Size, tiling and placement from the chosen image directory; georeferencing from the first (overviews
+        carry none: their pixel size is the full one times how much smaller they are)."""
+        fmt = {1: "B", 3: "H", 4: "I", 11: "f", 12: "d", 16: "Q"}
+
+        def val(tag, src=None):
+            typ, cnt, raw, _at = (src or tags)[tag]
             if typ == 2:
                 return raw.decode("latin-1").strip("\0 ")
             return struct.unpack(bo + fmt[typ] * cnt, raw)
@@ -146,14 +170,21 @@ class COG:
         pred = val(317)[0] if 317 in tags else 1
         if val(258)[0] != 32 or val(339)[0] != 3 or pred != 1 or self.compression not in (1, 5):
             raise ValueError("unsupported GeoTIFF layout (want float32, no predictor, LZW or none)")
-        sx, sy = val(33550)[:2]
-        tie = val(33922)
-        self.x0, self.y0, self.sx, self.sy = tie[3] - tie[0] * sx, tie[4] + tie[1] * sy, sx, sy
-        self.nodata = float(val(42113)) if 42113 in tags else None
+        sx, sy = val(33550, first)[:2]
+        tie = val(33922, first)
+        x0, y0 = tie[3] - tie[0] * sx, tie[4] + tie[1] * sy
+        k = val(256, first)[0] / self.width                 # how much smaller this overview is
+        self.x0, self.y0, self.sx, self.sy = x0, y0, sx * k, sy * k
+        self.nodata = float(val(42113, first)) if 42113 in first else None
         self.across = (self.width + self.tw - 1) // self.tw
         self._off_at, self._cnt_at = tags[324][3], tags[325][3]
         self._otype, self._ctype = tags[324][0], tags[325][0]       # the two tables can use different int sizes
         self._entries = {}
+        if self._off_at is None or self._cnt_at is None:             # a one-tile image keeps them in the entry itself
+            offs, cnts = val(324), val(325)
+            for tj in range((self.height + self.th - 1) // self.th):
+                k0 = tj * self.across
+                self._entries[tj] = (offs[k0:k0 + self.across], cnts[k0:k0 + self.across])
 
     def _tile_entry(self, ti, tj):
         """(byte offset, byte count) of tile column ti, row tj (rows of the index are fetched once each)."""
