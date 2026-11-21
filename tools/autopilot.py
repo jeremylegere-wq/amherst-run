@@ -56,7 +56,7 @@ class Autopilot:
         steer, err = steer_to(car, tx, ty)
         if abs(err) > 1.0:
             v = min(v, 6.0)
-        v = min(v, obstacle_limit(car, others, look=14.0, width=2.0))
+        v = min(v, obstacle_limit(car, others, look=14.0, width=2.0, gap=4.4, gain=1.3, predict=0.0))   # a player
         speed_control(car, v)
         if car.speed < 1.0 and v > 3.0:
             self.stuck += dt

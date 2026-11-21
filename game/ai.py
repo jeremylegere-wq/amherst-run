@@ -88,10 +88,11 @@ FOLLOW_GAIN = 0.8        # m/s of speed allowed per metre of gap beyond that (ab
 PREDICT = 0.9            # seconds: where other cars will be, so one crossing our path is seen in time
 
 
-def obstacle_limit(car, others, look=None, width=2.3):
+def obstacle_limit(car, others, look=None, width=2.3, gap=FOLLOW_GAP, gain=FOLLOW_GAIN, predict=PREDICT):
     """Highest safe speed given cars ahead (1e9 if the road is clear). Looks further the faster the car goes, and
     checks both where each other car is and where it will be in PREDICT seconds, so a car crossing or merging in front
-    is braked for before it is in the lane."""
+    is braked for before it is in the lane. gap/gain/predict: tools/autopilot.py drives like a player, closer and
+    without looking ahead in time (predict=0)."""
     fx, fy = car.forward
     rx, ry = car.right
     if look is None:
@@ -104,12 +105,12 @@ def obstacle_limit(car, others, look=None, width=2.3):
         if abs(dx) > look + 15.0 or abs(dy) > look + 15.0:
             continue
         lead = max(0.0, o.vx * fx + o.vy * fy)                       # its speed along our direction
-        for t in (0.0, PREDICT):
+        for t in ((0.0, predict) if predict else (0.0,)):
             px, py = dx + o.vx * t, dy + o.vy * t
             f = px * fx + py * fy - car.speed * t * (t > 0)         # where we will be by then, too
             if f < 0.5 or f > look or abs(px * rx + py * ry) > width:
                 continue
-            v = max(0.0, f - FOLLOW_GAP) * FOLLOW_GAIN + (lead if t == 0.0 else 0.0)
+            v = max(0.0, f - gap) * gain + (lead if t == 0.0 else 0.0)
             if v < limit:
                 limit = v
     return limit

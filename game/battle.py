@@ -133,7 +133,7 @@ class Battle(TwoPlayer):
         self.racers = [Racer() for _ in self.cars]
         self.base_palettes = [dict(c.palette) for c in self.cars]
         self.shots, self.slicks = [], []
-        centre = ARENA if mode == "balloon" else self._race_centre()
+        centre = self.arena if mode == "balloon" else self._race_centre()
         reach = ARENA_RADIUS if mode == "balloon" else math.hypot(self._starts[0][0] - self.target[1],
                                                                    self._starts[0][1] - self.target[2]) / 2 + 300.0
         self.boxes = I.box_sites(self.graph, centre, reach, spacing=I.BOX_SPACING if mode == "balloon" else 110.0)
@@ -147,7 +147,8 @@ class Battle(TwoPlayer):
         """(x, y, heading) per player: two junctions facing each other downtown, or side by side for a race."""
         g = self.graph
         if self.mode == "balloon":
-            cx, cy = ARENA
+            self.arena = self._arena()
+            cx, cy = self.arena
             nodes = [i for i in range(len(g.nodes)) if g.out[i]
                      and 90.0 < math.hypot(g.nodes[i][0] - cx, g.nodes[i][1] - cy) < 260.0]
             self.rng.shuffle(nodes)
@@ -178,6 +179,14 @@ class Battle(TwoPlayer):
         x, y = x + e.dx * 8.0, y + e.dy * 8.0
         rx, ry = -math.sin(h), math.cos(h)
         return [(x + rx * side, y + ry * side, h) for side in (-1.6, 1.6, -1.6, 1.6)[:n]]
+
+    def _arena(self):
+        """Downtown Amherst; on another map (the sample town) the start point, wherever junctions are."""
+        g = self.graph
+        if any(len(g.out[n]) >= 3 and math.hypot(x - ARENA[0], y - ARENA[1]) < 300.0 for n, (x, y) in enumerate(g.nodes)):
+            return ARENA
+        x, y, _h = self.game_spawn()
+        return (x, y)
 
     def game_world(self):
         return self._game_ref.world
@@ -344,7 +353,8 @@ class Battle(TwoPlayer):
             rivals = [(j, c) for j, c in enumerate(self.cars)
                       if not self.racers[j].out and (j != s.owner or s.age > I.OWNER_SAFE * 2)]
             bounces = s.bounces
-            res = I.step_shot(s, self.game.world, dt, rivals)
+            shielded = [j for j, r in enumerate(self.racers) if r.orbit and j != s.owner]
+            res = I.step_shot(s, self.game.world, dt, [(j, c) for j, c in rivals if j not in shielded])
             if s.bounces > bounces:
                 sfx.play("ricochet")
             if res == "gone":
@@ -354,15 +364,12 @@ class Battle(TwoPlayer):
                 continue
             blocked = False
             for j, (car, r) in enumerate(zip(self.cars, self.racers)):
-                if r.orbit and j != s.owner:
-                    for ox, oy in I.orbit_points(car, r.orbit, self.time):
-                        if (ox - s.x) ** 2 + (oy - s.y) ** 2 < I.ORBIT_BLOCK ** 2:
-                            blocked = True
-                            r.orbit -= 1
-                            if r.orbit <= 0 and r.item == "triple":
-                                r.item = r.shown = None
-                            break
-                if blocked:
+                reach = I.ORBIT_RADIUS + I.ORBIT_BLOCK / 2
+                if r.orbit and j != s.owner and (car.x - s.x) ** 2 + (car.y - s.y) ** 2 < reach * reach:
+                    blocked = True                         # one of the circling pucks takes the hit
+                    r.orbit -= 1
+                    if r.orbit <= 0 and r.item == "triple":
+                        r.item = r.shown = None
                     break
             if blocked or any((c.x - s.x) ** 2 + (c.y - s.y) ** 2 < 4.0 for c in town_cars):
                 sfx.play("ricochet")
