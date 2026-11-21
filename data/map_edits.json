@@ -266,7 +266,14 @@
      407.54,
      -922.69
     ],
-    "_note": "98 Victoria St E, Dominion Public Building 1934-36 (Canadian Register of Historic Places): light grey sandstone front, two storeys"
+    "_note": "98 Victoria St E, Dominion Public Building 1934-36 (Canadian Register of Historic Places): light grey sandstone front, two storeys. East wall: North Nova Scotia Highlanders memorial mural (WWII), an original simplified panel.",
+    "mural": {
+     "design": "highlanders",
+     "facing": 118.0,
+     "width": 6.0,
+     "bottom": 1.8,
+     "top": 9.0
+    }
    },
    {
     "material": "sandstone",
@@ -4917,6 +4924,20 @@
     "door_at": -1.0,
     "chimney": 0.0,
     "_note": "Harding Ave home (reference photos + LiDAR pyramid roof): two-storey foursquare, taupe shingles, tan hip roof; the front 8.2 m of the OSM outline"
+   },
+   {
+    "at": [
+     396.55,
+     -975.2
+    ],
+    "mural": {
+     "design": "mystery",
+     "facing": 25.0,
+     "width": 11.5,
+     "bottom": 0.4,
+     "top": 11.0
+    },
+    "_note": "LaPlanche St (9, by the civic file; the mural is listed near 7): 'The Great Amherst Mystery' mural on the wall facing the lot towards Victoria St, an original simplified panel (placed approximately)"
    }
   ]
  },

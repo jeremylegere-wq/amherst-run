@@ -27,6 +27,7 @@ import pygame
 from . import config as C
 from . import streetdetail as SD
 from . import archetypes
+from . import murals
 from .builder import face_normal, roof_faces
 from .car import MODELS, PLAYER_PALETTE, Car
 from .world import CELL
@@ -191,6 +192,7 @@ SHOP_DETAIL = 70.0        # metres: shop fronts and upper-storey windows on down
 SHOP_ZONES = ("D", "U", "N")
 HOUSE_DETAIL = 45.0       # metres: doors, windows, foundations and porches on houses (game/archetypes.py) inside this
 PROP_DIST = 130.0         # trees and lamps further than this are not drawn
+MURAL_DIST = 160.0        # wall murals (game/murals.py) are painted on within this distance
 DETAIL_DIST = 95.0        # signs, hydrants, benches and the like
 DETAIL_KINDS = frozenset(SD.FURNITURE_KINDS)
 PAINT_DIST = 95.0         # road paint further than this is skipped (it is a pixel by then)
@@ -542,6 +544,7 @@ class Renderer3D:
                   "front": b.get("front"), "door": b.get("door"), "door_at": b.get("door_at"),
                   "sidelights": b.get("sidelights"), "shutters": b.get("shutters"),
                   "front_windows": b.get("front_windows"), "plaque": b.get("plaque"), "window_h": b.get("window_h"),
+                  "mural": b.get("mural"),
                   "axis": math.atan2(longest[3] - longest[1], longest[2] - longest[0]),
                   "roof": None}
             faces = roof_faces(pts, height, roof, b.get("roof_height", 0.0), b.get("ridge_across", False)) if roof else []
@@ -1539,6 +1542,8 @@ class Renderer3D:
             self._draw_windows(surf, x0, y0, x1, y1, h, self.col(st["win"], sh, fog))
         if st["arched"]:
             self._draw_arched_windows(surf, x0, y0, x1, y1, h, self.col(self.st["windows"] or (40, 60, 118), sh, fog), ink)
+        if ex and ex.get("mural") and dist < MURAL_DIST:
+            self._draw_mural(surf, idx, wi, x0, y0, x1, y1, nx, ny, h, sh, fog, ink)
         if st["cornice"]:
             self._wall_band(surf, x0, y0, x1, y1, h - 0.75, h - 0.25, self.col(st["cornice"], sh, fog), ink)
         if st["landmark"] == "armoury":
@@ -1625,6 +1630,56 @@ class Renderer3D:
                         rect(min(a, a + s0 * 0.42), max(a, a + s0 * 0.42), z - 0.08, z + wh + 0.08, shutter)
         if house["porch"] and (front or wi == house.get("wrap_wall")):
             self._draw_porch(surf, x0, y0, ux, uy, nx, ny, L, fh, sh, fog, ink)
+
+    def _draw_mural(self, surf, idx, wi, x0, y0, x1, y1, nx, ny, h, sh, fog, ink):
+        """A mural (game/murals.py) on the wall of building idx that faces its "facing" bearing, centred on the wall.
+        Drawn once, with the piece of the wall that holds the wall's middle (long walls are drawn in pieces)."""
+        m = self.extras[idx]["mural"]
+        key = ("mural", idx)
+        if key not in self._houses:
+            fb = math.radians(m.get("facing", 0.0))
+            fx, fy = math.sin(fb), -math.cos(fb)
+            walls = self.buildings[idx][4]
+            self._houses[key] = max(range(len(walls)), key=lambda k: walls[k][4] * fx + walls[k][5] * fy)
+        if wi != self._houses[key] or m.get("design") not in murals.DESIGNS:
+            return
+        whole = self.buildings[idx][4][wi]
+        mx, my = (whole[0] + whole[2]) / 2, (whole[1] + whole[3]) / 2
+        L = math.hypot(x1 - x0, y1 - y0)
+        if L < 0.1:
+            return
+        t = ((mx - x0) * (x1 - x0) + (my - y0) * (y1 - y0)) / (L * L)
+        if not 0.0 <= t <= 1.0:
+            return                                                          # another piece of this wall holds it
+        WL = math.hypot(whole[2] - whole[0], whole[3] - whole[1])
+        width = min(m.get("width", WL - 1.0), WL - 0.6)
+        z0, z1 = m.get("bottom", 1.0), min(m.get("top", h - 0.6), h - 0.2)
+        ux, uy = ny, -nx                                                    # left to right, seen from outside
+        out = 0.04
+
+        def P(u, v):
+            return (mx + ux * (u - 0.5) * width + nx * out, my + uy * (u - 0.5) * width + ny * out, z0 + v * (z1 - z0))
+        span = z1 - z0
+        for shape in murals.DESIGNS[m["design"]]:
+            kind = shape[0]
+            if kind == "rect":
+                _k, a0, b0, a1, b1, rgb = shape
+                self._poly(surf, [P(a0, b0), P(a1, b0), P(a1, b1), P(a0, b1)], self.col(rgb, sh, fog),
+                           ink if (a0, b0, a1, b1) == (0.0, 0.0, 1.0, 1.0) else None)
+            elif kind == "poly":
+                self._poly(surf, [P(a, b) for a, b in shape[1]], self.col(shape[2], sh, fog))
+            elif kind == "disc":
+                _k, cu, cv, r, rgb = shape
+                ru = r * span / width                                       # keep it round on the wall
+                self._poly(surf, [P(cu + ru * math.cos(k * math.pi / 5), cv + r * math.sin(k * math.pi / 5))
+                                  for k in range(10)], self.col(rgb, sh, fog))
+            elif kind == "letters":
+                _k, a0, b0, a1, b1, rgb, n = shape
+                step = (a1 - a0) / n
+                for k in range(n):
+                    top = b1 if k % 3 else b1 + (b1 - b0) * 0.3                # the odd capital stands taller
+                    self._poly(surf, [P(a0 + k * step, b0), P(a0 + (k + 0.65) * step, b0),
+                                      P(a0 + (k + 0.65) * step, top), P(a0 + k * step, top)], self.col(rgb, sh, fog))
 
     def _draw_shop_front(self, surf, idx, ex, x0, y0, x1, y1, h, sh, fog, ink):
         """Downtown shop front: display windows between stone piers, a door, a sign band, and rows of upper windows

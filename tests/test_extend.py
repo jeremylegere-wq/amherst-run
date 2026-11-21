@@ -213,3 +213,31 @@ class Scenery(unittest.TestCase):
         self.assertFalse(R.graffiti_ok({"material": "clapboard"}, 500))
         self.assertFalse(R.graffiti_ok({"material": "brick", "arch": "two_storey"}, 500))
         self.assertTrue(R.graffiti_ok({"material": "brick"}, 500))
+
+
+class Murals(unittest.TestCase):
+    def test_designs_stay_on_their_wall(self):
+        from game import murals
+        for name, shapes in murals.DESIGNS.items():
+            for sh in shapes:
+                pts = sh[1] if sh[0] == "poly" else ([(sh[1], sh[2])] if sh[0] == "disc" else [(sh[1], sh[2]), (sh[3], sh[4])])
+                for u, v in pts:
+                    self.assertTrue(0.0 <= u <= 1.0 and 0.0 <= v <= 1.0, (name, sh))
+
+    def test_mural_is_painted_on_the_wall_it_faces(self):
+        pygame.init()
+        data = make_sample_map.build()
+        data["roads"] = [{"type": "side", "width": 8, "name": "Elm St", "points": [[-200, 0], [200, 0]]}]
+        data["buildings"] = [{"points": [[-6, 10], [6, 10], [6, 22], [-6, 22]], "tags": {"building": "yes"}, "height": 10.0,
+                              "material": "brick", "mural": {"design": "highlanders", "facing": 0.0, "width": 8.0}}]
+        world = World(data)
+        r = R.Renderer3D(world, style="street")
+        car = Car(0.0, -12.0, math.pi / 2)                            # north of the wall, looking south at it
+        cam = R.ChaseCamera(car, world)
+        for _ in range(40):
+            cam.update(car, 1 / 30)
+        surf = pygame.Surface((C.INTERNAL_W, C.INTERNAL_H))
+        r.render(surf, car, cam)
+        red = {r.col((214, 40, 40), s, f) for s in range(4) for f in range(3)}
+        got = {tuple(surf.get_at((x, y)))[:3] for x in range(0, surf.get_width()) for y in range(0, surf.get_height())}
+        self.assertTrue(got & red, "no poppies: the mural is not on the north wall")
