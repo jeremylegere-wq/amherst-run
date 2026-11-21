@@ -162,9 +162,10 @@ class World:
         self.rails = data.get("rails", [])
         self.water = data.get("water", [])
         self.parks = data.get("parks", [])
+        self.lots = data.get("lots", [])                       # open parking lots (game/parking.py)
         landmarks = data.get("landmarks", [])
         self.horizon = [l for l in landmarks if l["kind"] == "turbine"]   # drawn on the skyline
-        for group in (self.roads, self.buildings, self.rails, self.water, self.parks):
+        for group in (self.roads, self.buildings, self.rails, self.water, self.parks, self.lots):
             for item in group:
                 item["bbox"] = _bbox(item["points"])
         self.bounds = tuple(self.meta["bounds"])
@@ -243,6 +244,10 @@ class World:
         from . import mapedits
         for line in mapedits.apply(data, mapedits.load_beside(path)):          # your hand edits (tools/map_editor.py)
             print(line)
+        from . import parking                         # open parking lots; after the edits (they key on whole roads)
+        line = parking.apply(data, parking.load_beside(path))
+        if line:
+            print(line)
         if zoning:                                    # zone looks first, so custom buildings and landmarks win
             from . import zoning as zoning_mod
             zones = zoning_mod.load_beside(path)
@@ -301,15 +306,31 @@ class World:
         self.buildings[i] = {"points": [[far, far], [far, far + 1], [far + 1, far]], "bbox": (far, far, far + 1, far + 1),
                              "removed": True}
     # --- queries -----------------------------------------------------------
+    def in_lot(self, x, y):
+        """True if (x, y) is on an open parking lot."""
+        if not self.lots:
+            return False
+        if not hasattr(self, "_lot_grid"):
+            self._lot_grid = defaultdict(list)
+            for i, lot in enumerate(self.lots):
+                for c in _cells(lot["bbox"]):
+                    self._lot_grid[c].append(i)
+        for i in self._lot_grid.get((int(x // CELL), int(y // CELL)), ()):
+            lot = self.lots[i]
+            x0, y0, x1, y1 = lot["bbox"]
+            if x0 <= x <= x1 and y0 <= y <= y1 and point_in_polygon(x, y, lot["points"]):
+                return True
+        return False
+
     def on_road(self, x, y):
-        """True if (x, y) lies within any road's width."""
+        """True if (x, y) lies within any road's width, or on an open parking lot."""
         cx, cy = int(x // CELL), int(y // CELL)
         for gx in (cx - 1, cx, cx + 1):
             for gy in (cy - 1, cy, cy + 1):
                 for ax, ay, bx, by, w in self._road_grid.get((gx, gy), ()):
                     if _seg_dist(x, y, ax, ay, bx, by) <= w / 2:
                         return True
-        return False
+        return self.in_lot(x, y)
 
     def _near_span(self, x, y, margin):
         for sp in self._span_grid.get((int(x // CELL), int(y // CELL)), ()):

@@ -10,6 +10,12 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 ## [Unreleased]
 
 ### Added
+- Open parking lots: 73 surface lots from OpenStreetMap (`tools/fetch_parking.py` -> `data/parking.json`, 23.8 ha)
+  are drawn as paved areas with painted stall lines up close and count as road to drive on; driveway roads that ran
+  through them are cut back to stubs at the lot edges (the mall, Walmart, the Superstore, the regional high school).
+- Two downtown murals as simplified original panels: the North Nova Scotia Highlanders memorial on the Town Hall's
+  east wall, and The Great Amherst Mystery on the LaPlanche St wall facing the lot towards Victoria St (placed
+  approximately). A building's `mural` (design, facing, width, bottom, top) paints it on the wall facing that way.
 - Two-player BATTLE (balloon battle downtown) and VS RACE (race to a random landmark under a light beacon) on the
   start screen, or `--vs battle` / `--vs sprint`: item boxes at junctions with original items (puck, seeker, oil slick,
   turbo can, ghost mode, triple puck), balloons, spin-outs, rams, per-player HUD with item window, balloons or

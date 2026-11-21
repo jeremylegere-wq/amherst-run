@@ -241,3 +241,34 @@ class Murals(unittest.TestCase):
         red = {r.col((214, 40, 40), s, f) for s in range(4) for f in range(3)}
         got = {tuple(surf.get_at((x, y)))[:3] for x in range(0, surf.get_width()) for y in range(0, surf.get_height())}
         self.assertTrue(got & red, "no poppies: the mural is not on the north wall")
+
+
+class ParkingLots(unittest.TestCase):
+    LOT = {"points": [[0, 0], [60, 0], [60, 40], [0, 40]], "area": 2400}
+
+    def test_driveway_through_a_lot_is_cut_to_stubs_at_its_edges(self):
+        from game import parking
+        pieces = parking.cut([[-30, 20], [90, 20]], [self.LOT["points"]])
+        self.assertEqual(len(pieces), 2)                                   # one stub each side
+        self.assertAlmostEqual(pieces[0][-1][0], parking.REACH, delta=1.1)    # reaches 1 m into the lot
+        self.assertAlmostEqual(pieces[1][0][0], 60 - parking.REACH, delta=1.1)
+
+    def test_apply_keeps_streets_and_reports(self):
+        from game import parking
+        data = {"roads": [{"type": "side", "name": "Main St", "points": [[-30, 20], [90, 20]]},
+                          {"type": "lane", "name": "", "service": "driveway", "points": [[-30, 10], [90, 10]]},
+                          {"type": "lane", "name": "", "service": "driveway", "points": [[10, 10], [40, 10]]}]}
+        line = parking.apply(data, [self.LOT])
+        names = [r["name"] for r in data["roads"]]
+        self.assertIn("Main St", names)                                    # named streets are never cut
+        self.assertEqual(sum(1 for r in data["roads"] if r.get("service")), 2)   # the inner aisle is gone
+        self.assertIn("2 driveway roads cut back", line)
+
+    def test_a_lot_is_road_to_drive_on_and_gets_stall_lines(self):
+        from game import parking
+        data = make_sample_map.build()
+        data["lots"] = [dict(self.LOT, points=[[x + 2000, y + 2000] for x, y in self.LOT["points"]])]
+        world = World(data)
+        self.assertTrue(world.on_road(2030, 2020))
+        self.assertFalse(world.on_road(2100, 2100))
+        self.assertGreater(len(parking.stall_lines(data["lots"][0])), 20)

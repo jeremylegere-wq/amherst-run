@@ -193,6 +193,7 @@ SHOP_ZONES = ("D", "U", "N")
 HOUSE_DETAIL = 45.0       # metres: doors, windows, foundations and porches on houses (game/archetypes.py) inside this
 PROP_DIST = 130.0         # trees and lamps further than this are not drawn
 MURAL_DIST = 160.0        # wall murals (game/murals.py) are painted on within this distance
+STALL_DIST = 45.0         # parking stall lines are painted within this distance
 DETAIL_DIST = 95.0        # signs, hydrants, benches and the like
 DETAIL_KINDS = frozenset(SD.FURNITURE_KINDS)
 PAINT_DIST = 95.0         # road paint further than this is skipped (it is a pixel by then)
@@ -491,6 +492,7 @@ class Renderer3D:
         self.buildings = {}
         self.extras = {}            # building index -> material / landmark details
         self._parked_cars = None    # hand-placed parked cars as Car objects (see parked_cars)
+        self._stalls = None         # painted stall lines per parking lot, made on first draw
         self._houses = {}           # building index -> house details (game/archetypes.py), worked out when first close
         self._shops = {}            # building index -> walls with a shop front (set), worked out when first close
         for i, b in enumerate(self.world.buildings):
@@ -1023,6 +1025,33 @@ class Renderer3D:
                     dx, dy = (b[0] - a[0]) / L, (b[1] - a[1]) / L
                     self._poly_fog(surf, self._quad(a[0], a[1], b[0], b[1], dx, dy, 1.3, 0.008, ext=0.0,
                                                     g0=self._g(a[0], a[1]), g1=self._g(b[0], b[1])), st["path"], 3)
+        # open parking lots (game/parking.py): asphalt, with painted stall lines up close
+        lots = getattr(self.world, "lots", ())
+        if lots:
+            if self._stalls is None:
+                self._stalls = {}                                   # lot index -> stall lines, made when first near
+            road = st["road"]
+            base = road["side"] if isinstance(road, dict) else road
+            asphalt = _lerp_rgb(base, (150, 150, 156), 0.25)
+            paint = (236, 236, 228)
+            for li, lot in enumerate(lots):
+                x0, y0, x1, y1 = lot["bbox"]
+                if x1 < self.cx - DRAW_DIST or x0 > self.cx + DRAW_DIST or y1 < self.cy - DRAW_DIST or y0 > self.cy + DRAW_DIST:
+                    continue
+                self._poly_fog(surf, [(p[0], p[1], 0.012 + self._g(p[0], p[1])) for p in lot["points"]], asphalt, 3)
+                if x1 < self.cx - STALL_DIST or x0 > self.cx + STALL_DIST or y1 < self.cy - STALL_DIST or y0 > self.cy + STALL_DIST:
+                    continue
+                if li not in self._stalls:
+                    from .parking import stall_lines
+                    self._stalls[li] = stall_lines(lot)
+                for ax, ay, bx, by in self._stalls[li]:
+                    if abs((ax + bx) / 2 - self.cx) > STALL_DIST or abs((ay + by) / 2 - self.cy) > STALL_DIST:
+                        continue
+                    a = self.project(ax, ay, 0.02 + self._g(ax, ay))
+                    b = self.project(bx, by, 0.02 + self._g(bx, by))
+                    if a and b:
+                        pygame.draw.line(surf, self.col(paint, 3, self.fog_band(math.hypot(ax - self.cx, ay - self.cy))),
+                                         (a[0], a[1]), (b[0], b[1]))
         # water
         for w in self.water:
             x0, y0, x1, y1 = w["bbox"]
