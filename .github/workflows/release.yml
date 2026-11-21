@@ -1,7 +1,7 @@
 name: Release
 
 # Starts when a version tag such as v0.1.0 (or v0.2.0-rc.1) is pushed. It re-runs every CI check, then
-# creates a DRAFT GitHub Release with the game zip and checksums attached. Nothing is published
+# creates a DRAFT GitHub Release with the game zip, the native game's baked map and golden files, and checksums. Nothing is published
 # anywhere else. You review the draft and press "Publish release" yourself.
 on:
   push:
@@ -54,13 +54,23 @@ jobs:
       - name: Build the release zip and checksums
         run: tools/build_release_zip.sh "$TAG" dist
 
+      - name: Bake the map and golden files for the native C++ game (amherst-run-native)
+        env:
+          SDL_AUDIODRIVER: dummy
+          SDL_VIDEODRIVER: dummy
+        run: |
+          python -m pip install --quiet -r requirements.txt
+          python tools/bake_native.py --out dist/amherst.amr
+          python tools/golden.py --out dist/golden
+          (cd dist && python -m zipfile -c golden.zip golden/ && sha256sum amherst.amr golden.zip >> SHA256SUMS.txt)
+
       - name: Create the draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           flags=""
           case "$TAG" in *-*) flags="--prerelease" ;; esac
-          gh release create "$TAG" dist/amherst-run-*.zip dist/SHA256SUMS.txt \
+          gh release create "$TAG" dist/amherst-run-*.zip dist/amherst.amr dist/golden.zip dist/SHA256SUMS.txt \
             --draft --verify-tag $flags \
             --title "Amherst Run ${TAG}" \
             --notes-file release-notes.md

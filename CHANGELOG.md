@@ -9,6 +9,12 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+### Added
+- `tools/bake_native.py` bakes the loaded map (graded terrain, roads, overpass decks, buildings, areas, all
+  triangulated) into one binary file, `amherst.amr`, for the native C++ game (amherst-run-native). `tools/golden.py`
+  writes golden files of what the Python game answers (surface heights on and off the decks) for that game's parity
+  tests. Releases attach both, with their checksums.
+
 ## [1.0.0] - 2026-11-22
 Version 1: the roads flow. Smooth graded roads, working overpasses and on-ramps, cul-de-sacs, and Highway 104
 U-turns at the map edges.
