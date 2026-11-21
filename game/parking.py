@@ -123,6 +123,8 @@ def apply(data, lots):
 
 def stall_lines(lot, spacing=2.8, row=16.0, half=5.0):
     """Painted stall lines for a lot: rows of back-to-back stalls along its longest side. [(x0, y0, x1, y1)]."""
+    if lot.get("bulb"):
+        return []                                               # a cul-de-sac (game/turnarounds.py): no stalls
     pts = lot["points"]
     best = max(zip(pts, pts[1:] + pts[:1]), key=lambda e: math.dist(e[0], e[1]))
     L = math.dist(*best)

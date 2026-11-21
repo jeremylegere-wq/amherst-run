@@ -319,19 +319,6 @@ class LidarGroundTests(unittest.TestCase):
         self.assertEqual([round(v, 1) for v in t.h], [round(v, 1) for v in h])
         self.assertAlmostEqual(t.height(12.5, 0.0), 12.3, places=4)
 
-    def test_overpass_corridor_blends_in_the_smooth_ground(self):
-        from game.terrain import Terrain
-        lidar = Terrain(0, 0, 10.0, 21, 21, [10.0] * 441, scale=1.0)
-        for j in range(21):
-            lidar.h[j * 21 + 10] = 16.0                                 # an embankment along x = 100
-        smooth = Terrain(0, 0, 50.0, 5, 5, [10.0] * 25, scale=1.0)
-        weights = {}
-        lidar.blend_weights([(100, 0), (100, 200)], 8.0, 20.0, weights)
-        lidar.apply_blend(weights, smooth)
-        self.assertAlmostEqual(lidar.height(100, 100), 10.0, places=4)   # the embankment is gone under the road
-        self.assertAlmostEqual(lidar.height(150, 100), 10.0, places=4)   # far away: untouched
-        self.assertEqual(lidar.h[100 // 10 * 21 + 13], 10.0)
-
 
 class LidarTreeTests(unittest.TestCase):
     def doc(self, xs, ys, hs, covered=True):

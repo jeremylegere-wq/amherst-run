@@ -269,8 +269,8 @@ class Town:
             return False
         eid, s = pick
         x, y, h = g.lane_point(eid, s)
-        if self._occupied(x, y, player):
-            return False
+        if self._occupied(x, y, player) or self.world.height_at(x, y, 999.0) - self.world.ground(x, y) > 0.3:
+            return False                                       # (not on an overpass deck or ramp: start on the ground)
         c = AICar("traffic", self.rng.choice(PAL_TRAFFIC), x, y, h)
         c.z = self.world.height_at(x, y, 0.0)
         c.edge = eid

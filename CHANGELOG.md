@@ -9,6 +9,28 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+### Added
+- Cul-de-sacs where two-way roads just stop (53 on the map, at the map edge and at real dead ends): a paved turning
+  circle with a loop road round it, so you and the town's traffic can turn back. A bulb is left out where it would land
+  on a building or across another road; at the map edge the road is cut back so the circle fits inside
+  (`game/turnarounds.py`).
+- Highway 104 U-turns at both map edges: the outgoing carriageway runs on past its end and swings round into the
+  incoming one, so traffic and you can head back the other way.
+- `tools/road_check.py` drives a probe along every road and reports anything that stops a car, sudden steps and very
+  steep grades.
+
+### Changed
+- Roads are graded into the LiDAR ground at load (`game/grading.py`): narrow dips (stream gullies, ditches) are filled,
+  short humps cut, and each road's profile smoothed, so roads no longer dip and pick up again where the survey shows the
+  ground under a bridge. Busier roads are graded first and the roads that join them meet their level, so junctions and
+  on-ramps have no steps. This replaces the old blend of the smooth grid under overpasses.
+- Overpass decks are straight between their embankments, at least their clearance above the road below, with smooth
+  ramps; deck pieces that touch are one bridge (Nappan Rd). Long bridges that cross a road (Highway 104 over Highway 2
+  and the marsh) are now decks too, so the road below no longer cuts a notch in them. Far deck pieces skip their
+  barriers and are culled to the view like road pieces.
+- Power poles that stood in roads (67 of them blocked a lane, including on the Exit 3 overpass approach) are moved to
+  the verge, and traffic no longer spawns on overpass ramps.
+
 ## [0.4.0] - 2026-11-21
 More of the real landscape: real trees and ground shape from the 2020 LiDAR survey, power lines, streams and land use.
 

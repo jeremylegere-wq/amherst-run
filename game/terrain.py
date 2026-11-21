@@ -107,43 +107,6 @@ class Terrain:
         n = self.normal(x, y)
         return math.sqrt(max(0.0, 1.0 - n[2] * n[2])) / max(1e-6, n[2])
 
-    def blend_weights(self, points, radius, blend, weights):
-        """Record, for nodes near a polyline, how much of this terrain to keep (0 within `radius`, rising to 1 over the
-        next `blend` metres by smoothstep). weights: {node index: weight}, the lowest weight wins where lines overlap."""
-        import numpy as np
-        if len(points) < 2:
-            return
-        reach = radius + blend
-        xs, ys = [p[0] for p in points], [p[1] for p in points]
-        i0 = max(0, int((min(xs) - reach - self.x0) / self.step))
-        i1 = min(self.nx - 1, int((max(xs) + reach - self.x0) / self.step) + 1)
-        j0 = max(0, int((min(ys) - reach - self.y0) / self.step))
-        j1 = min(self.ny - 1, int((max(ys) + reach - self.y0) / self.step) + 1)
-        if i1 < i0 or j1 < j0:
-            return
-        ii, jj = np.meshgrid(np.arange(i0, i1 + 1), np.arange(j0, j1 + 1))
-        X, Y = self.x0 + ii * self.step, self.y0 + jj * self.step
-        best = np.full(X.shape, reach)
-        for a, b in zip(points, points[1:]):
-            dx, dy = b[0] - a[0], b[1] - a[1]
-            L2 = dx * dx + dy * dy
-            t = np.zeros(X.shape) if L2 == 0 else np.clip(((X - a[0]) * dx + (Y - a[1]) * dy) / L2, 0.0, 1.0)
-            np.minimum(best, np.hypot(X - a[0] - t * dx, Y - a[1] - t * dy), out=best)
-        near = best < reach
-        u = np.clip((best - radius) / blend, 0.0, 1.0)
-        w = u * u * (3.0 - 2.0 * u)
-        for n, wv in zip((jj[near] * self.nx + ii[near]).tolist(), w[near].tolist()):
-            if wv < weights.get(n, 1.0):
-                weights[n] = wv
-
-    def apply_blend(self, weights, other, offset=0.0):
-        """Mix in `other` terrain (+ offset) by 1 - weight at each recorded node (see blend_weights)."""
-        for n, w in weights.items():
-            i, j = n % self.nx, n // self.nx
-            o = other.height(self.x0 + i * self.step, self.y0 + j * self.step) + offset
-            self.h[n] = o * (1.0 - w) + self.h[n] * w
-        return len(weights)
-
     def bounds(self):
         return (self.x0, self.y0, self.x0 + (self.nx - 1) * self.step, self.y0 + (self.ny - 1) * self.step)
 

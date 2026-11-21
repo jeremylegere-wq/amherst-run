@@ -46,6 +46,7 @@ WALL_PIECE = 12.0         # long building walls are sorted in pieces this long
 ORDER_NEAR = 10.0         # cars/props this close to a wall plane get their draw order checked against it
 ORDER_CELL = 16.0         # grid used to find those walls
 SPAN_PIECE = 10.0         # overpass decks are cut into pieces this long
+DECK_DETAIL = 90.0      # metres: overpass pieces further away skip their barriers and underside
 PIECE_LEN = 20.0          # roads/rails are cut into pieces so fog and culling work per piece
 
 FOG_RGB = (178, 202, 228)
@@ -340,6 +341,23 @@ def _hull(points):
     return lower[:-1] + upper[:-1]
 
 
+
+def _coarsen(pts, hs, step):
+    """Keep points about `step` metres apart along a polyline (and its heights): spans are sampled every 4 m for
+    their heights (game/grading.py), but drawn in pieces about SPAN_PIECE long."""
+    if len(pts) < 3:
+        return pts, hs
+    out, oh, run = [pts[0]], [hs[0]], 0.0
+    for k in range(1, len(pts) - 1):
+        run += math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1])
+        if run >= step - 1e-6:
+            out.append(pts[k])
+            oh.append(hs[k])
+            run = 0.0
+    out.append(pts[-1])
+    oh.append(hs[-1])
+    return out, oh
+
 class _Frame:
     """A position + heading, so boxes for monuments and towers can reuse the car box code."""
     __slots__ = ("x", "y", "forward", "right")
@@ -472,7 +490,7 @@ class Renderer3D:
         self.span_pieces = []
         for sp in getattr(self.world, "spans", ()):
             hw = sp["width"] / 2.0
-            pts, hs = sp["points"], sp["h"]
+            pts, hs = _coarsen(sp["points"], sp["h"], SPAN_PIECE)
             for i in range(len(pts) - 1):
                 (ax, ay), (bx, by) = pts[i], pts[i + 1]
                 L = math.hypot(bx - ax, by - ay)
@@ -1305,8 +1323,9 @@ class Renderer3D:
         for pc in self.span_pieces:
             dx, dy = pc[9] - cx, pc[10] - cy
             dist = math.hypot(dx, dy)
-            if dist > DRAW_DIST or dx * fhx + dy * fhy < -SPAN_PIECE:
-                continue
+            fwd = dx * fhx + dy * fhy
+            if dist > DRAW_DIST or fwd < -SPAN_PIECE or abs(dx * self.rx + dy * self.ry) > fwd * 0.95 + 30.0:
+                continue                           # (behind, or outside the view cone: same test as road pieces)
             objs.append((dist + 11.0, 4, pc))      # +11: a deck piece is painted before cars standing on it
         self._fix_wall_order(objs)                        # cars/props hugging a wall: put them on the right side of it
         objs.sort(key=lambda o: o[0], reverse=True)       # painter's algorithm: far to near
@@ -1424,12 +1443,14 @@ class Renderer3D:
         ex, ey = nx * kerb * side, ny * kerb * side
         a, b = (x0 + ex, y0 + ey, h0), (x1 + ex, y1 + ey, h1)
         self._wall(surf, a, b, -1.1, 0.0, (nx * side, ny * side), wallc, fog, ink)
-        if min(h0 - g0, h1 - g1) > 1.2 and self.cz < min(h0, h1) - 1.1:          # seen from underneath: the slab's belly
+        if dist <= DECK_DETAIL and min(h0 - g0, h1 - g1) > 1.2 and self.cz < min(h0, h1) - 1.1:          # seen from underneath: the slab's belly
             self._poly(surf, [(px, py, ph - 1.1) for px, py, ph in deck], self.col(wallc, 0, fog), ink)
         self._poly(surf, deck, self.col(st["kerb"], 3, fog))
         self._poly_fog(surf, [(x0 + nx * hw, y0 + ny * hw, h0 + 0.01), (x1 + nx * hw, y1 + ny * hw, h1 + 0.01),
                               (x1 - nx * hw, y1 - ny * hw, h1 + 0.01), (x0 - nx * hw, y0 - ny * hw, h0 + 0.01)],
                        st["road"]["main"], 2)
+        if dist > DECK_DETAIL:                                  # far away: slab and road are enough
+            return
         # barriers along both edges: inner face visible from the road, outer face from beside it
         for sgn in (-side, side):
             ox, oy = nx * sgn * (hw + 0.2), ny * sgn * (hw + 0.2)

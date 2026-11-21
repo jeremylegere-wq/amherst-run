@@ -45,7 +45,8 @@ def point_in_polygon(x, y, pts):
     return inside
 
 
-CLEARANCE = 1.8         # a deck lower than this has no road under it (it is a ramp, so it is the ground)
+CLEARANCE = 4.0         # a deck lower than this has no road under it (it is a ramp, so it is the surface); decks
+                        # stand at least their lift (5.2 m) above the road below (game/grading.py)
 SPAN_RAMP = 60.0       # metres of approach ramp on each side of an overpass deck
 
 
@@ -73,23 +74,45 @@ def _densify(points, step):
     return out
 
 
-CARVE_MARGIN = 14.0     # metres beside an overpass and its ramps where the ground is lowered to the road below
-CARVE_ALONG = 80.0      # metres each way along the road passing under an overpass that are lowered too
-CARVE_BLEND = 20.0      # metres over which that blends back into the LiDAR ground
 
 
-def _cross_point(a, b, c, d):
-    """Where segment a-b crosses segment c-d, or None."""
-    rx, ry = b[0] - a[0], b[1] - a[1]
-    sx, sy = d[0] - c[0], d[1] - c[1]
-    den = rx * sy - ry * sx
-    if abs(den) < 1e-9:
-        return None
-    t = ((c[0] - a[0]) * sy - (c[1] - a[1]) * sx) / den
-    u = ((c[0] - a[0]) * ry - (c[1] - a[1]) * rx) / den
-    if 0.0 <= t <= 1.0 and 0.0 <= u <= 1.0:
-        return (a[0] + rx * t, a[1] + ry * t)
-    return None
+LONG_BRIDGE_LIFT = 5.2   # deck height for a long bridge found to cross a road (tools/nsrn.py LIFT)
+
+
+def _cross(a, b):
+    """True if two polylines properly cross (inside both segments, not just touching at an end)."""
+    for (ax, ay), (bx, by) in zip(a, a[1:]):
+        for (cx, cy), (dx, dy) in zip(b, b[1:]):
+            rx, ry, sx, sy = bx - ax, by - ay, dx - cx, dy - cy
+            den = rx * sy - ry * sx
+            if abs(den) < 1e-9:
+                continue
+            t = ((cx - ax) * sy - (cy - ay) * sx) / den
+            u = ((cx - ax) * ry - (cy - ay) * rx) / den
+            if 0.02 < t < 0.98 and 0.02 < u < 0.98:
+                return True
+    return False
+
+
+def lift_long_bridges(roads):
+    """The converter (tools/nsrn.py mark_lifts) only lifts bridges up to 250 m long; a longer one that also crosses a
+    road (Highway 104 over Highway 2 and the marsh) needs a deck too, or the road below cuts a notch in it."""
+    ground = [r for r in roads if not r.get("bridge") and not r.get("lift")
+              and r.get("service") not in ("driveway", "track", "private")]
+    n = 0
+    for r in roads:
+        if not r.get("bridge") or r.get("lift") or len(r["points"]) < 2:
+            continue
+        bx = _bbox(r["points"])
+        for o in ground:
+            ob = _bbox(o["points"])
+            if ob[2] < bx[0] or ob[0] > bx[2] or ob[3] < bx[1] or ob[1] > bx[3]:
+                continue
+            if _cross(r["points"], o["points"]):
+                r["lift"] = LONG_BRIDGE_LIFT
+                n += 1
+                break
+    return n
 
 
 def build_spans(roads):
@@ -99,17 +122,16 @@ def build_spans(roads):
     continues into, SPAN_RAMP metres on each side, rising smoothly from the ground.
     """
     spans = []
-    for road in roads:
+    for group in _deck_chains(roads):
+        road = group[0]
         lift = road.get("lift")
-        if not lift:
-            continue
-        deck = [tuple(p) for p in road["points"]]
+        deck = _chain_points(group)
         hs = [lift] * len(deck)
         for end in (0, 1):
             ex, ey = deck[0] if end == 0 else deck[-1]
             ramp = None
             for o in roads:
-                if o is road or o.get("bridge") or o.get("lift"):
+                if o in group or o.get("bridge") or o.get("lift"):
                     continue
                 for oend in (0, 1):
                     q = o["points"][0] if oend == 0 else o["points"][-1]
@@ -133,18 +155,88 @@ def build_spans(roads):
             else:
                 deck = deck[:-1] + ramp
                 hs = hs[:-1] + rh
-        spans.append({"road": road, "width": road["width"], "lift": lift, "points": deck, "h": hs})
+        spans.append({"road": road, "roads": group, "width": road["width"], "lift": lift, "points": deck, "h": hs})
     return spans
+
+
+def _deck_chains(roads):
+    """Overpass roads ('lift'), with pieces that meet end to end (within 3 m) joined into one deck each."""
+    decks = [r for r in roads if r.get("lift")]
+    groups, used = [], set()
+    for r in decks:
+        if id(r) in used:
+            continue
+        group, used_now = [r], {id(r)}
+        grew = True
+        while grew:
+            grew = False
+            for o in decks:
+                if id(o) in used_now:
+                    continue
+                ends = [group[0]["points"][0], group[-1]["points"][-1]]
+                for e in (o["points"][0], o["points"][-1]):
+                    if any(abs(e[0] - q[0]) < 3.0 and abs(e[1] - q[1]) < 3.0 for q in ends):
+                        group.append(o)
+                        used_now.add(id(o))
+                        grew = True
+                        break
+        used |= used_now
+        groups.append(_order(group))
+    return groups
+
+
+def _order(group):
+    """The pieces of a deck in order along it (each piece's points may need reversing: see _chain_points)."""
+    if len(group) < 3:
+        return group
+    def near(a, b):
+        return abs(a[0] - b[0]) < 3.0 and abs(a[1] - b[1]) < 3.0
+    ends = []
+    for r in group:                                       # a piece with an end no other piece touches starts it
+        for e in (r["points"][0], r["points"][-1]):
+            if not any(o is not r and (near(e, o["points"][0]) or near(e, o["points"][-1])) for o in group):
+                ends.append(r)
+    out, left = [ends[0] if ends else group[0]], [r for r in group if r is not (ends[0] if ends else group[0])]
+    while left:
+        tail = out[-1]
+        nxt = next((o for o in left if any(near(e, f) for e in (tail["points"][0], tail["points"][-1])
+                                          for f in (o["points"][0], o["points"][-1]))), left[0])
+        out.append(nxt)
+        left.remove(nxt)
+    return out
+
+
+def _chain_points(group):
+    """One polyline through the deck pieces in order."""
+    pts = [tuple(p) for p in group[0]["points"]]
+    for r in group[1:]:
+        q = [tuple(p) for p in r["points"]]
+        if math.hypot(q[-1][0] - pts[-1][0], q[-1][1] - pts[-1][1]) < math.hypot(q[0][0] - pts[-1][0], q[0][1] - pts[-1][1]):
+            q = q[::-1]
+        if math.hypot(q[0][0] - pts[0][0], q[0][1] - pts[0][1]) < math.hypot(q[0][0] - pts[-1][0], q[0][1] - pts[-1][1]) \
+                and len(pts) > 1 and len(group) == 2:
+            pts = pts[::-1]
+        pts += q[1:] if math.hypot(q[0][0] - pts[-1][0], q[0][1] - pts[-1][1]) < 3.0 else q
+    return pts
 
 
 def sp_height(sp, x, y):
     """Deck height of a span at (x, y), or None when the point is off the deck."""
     pts, hs = sp["points"], sp["h"]
     half = sp["width"] / 2 + 0.3
+    box = sp.get("_box")
+    if box is None or box[0] is not pts:                  # (cached; rebuilt if the span's points are replaced)
+        xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+        box = sp["_box"] = (pts, min(xs) - half, min(ys) - half, max(xs) + half, max(ys) + half)
+    if x < box[1] or x > box[3] or y < box[2] or y > box[4]:
+        return None
     best = None
     for i in range(len(pts) - 1):
         ax, ay = pts[i]
         bx, by = pts[i + 1]
+        if (x < ax - half and x < bx - half) or (x > ax + half and x > bx + half) or \
+                (y < ay - half and y < by - half) or (y > ay + half and y > by + half):
+            continue
         dx, dy = bx - ax, by - ay
         ll = dx * dx + dy * dy
         if ll < 1e-9:
@@ -177,6 +269,7 @@ class World:
         self.addresses = None                     # game.addresses.Addresses (real civic numbers), set by World.load
         self.meta = data["meta"]
         self.roads = data["roads"]
+        lift_long_bridges(self.roads)
         self.buildings = data["buildings"]
         self.rails = data.get("rails", [])
         self.water = data.get("water", [])
@@ -216,7 +309,8 @@ class World:
                     self._name_grid[c].append((a[0], a[1], b[0], b[1], r["width"], ri))
         self.spans = build_spans(self.roads)         # overpass decks and their approach ramps
         if terrain is not None and getattr(terrain, "previous", None) is not None:
-            self._carve_overpasses(terrain)           # LiDAR ground has the bridge embankments: the spans bring their own
+            from .grading import grade                # LiDAR ground: grade the roads into it (game/grading.py)
+            self.graded = grade(terrain, self.roads, self.spans)
         self._span_grid = defaultdict(list)
         for sp in self.spans:
             for c in _cells(_bbox(sp["points"])):
@@ -259,30 +353,6 @@ class World:
             self._woods_index = WoodsIndex(self.woods)
         self._streaming = procedural and (self._woods_index is not None or self.lidar_trees is not None)
 
-    def _carve_overpasses(self, terrain):
-        """The bare-earth LiDAR includes bridge embankments, while each overpass builds its own deck and ramps on top
-        of the ground. So along each overpass and its ramps, and the road it crosses (CARVE_ALONG metres each way), the
-        ground is the smooth coarse grid the decks were made for (shifted to the LiDAR's datum), blended back into the
-        LiDAR over CARVE_BLEND metres."""
-        weights = {}
-        for sp in self.spans:
-            terrain.blend_weights(sp["points"], sp["width"] / 2.0 + CARVE_MARGIN, CARVE_BLEND, weights)
-            deck = sp["road"]["points"]
-            for r in self.roads:
-                if r is sp["road"] or r.get("lift"):
-                    continue
-                for a, b in zip(r["points"], r["points"][1:]):
-                    for c, d in zip(deck, deck[1:]):
-                        hit = _cross_point(a, b, c, d)
-                        if hit is None:
-                            continue
-                        L = math.hypot(b[0] - a[0], b[1] - a[1]) or 1.0
-                        ux, uy = (b[0] - a[0]) / L, (b[1] - a[1]) / L
-                        run = [(hit[0] - ux * CARVE_ALONG, hit[1] - uy * CARVE_ALONG),
-                               (hit[0] + ux * CARVE_ALONG, hit[1] + uy * CARVE_ALONG)]
-                        terrain.blend_weights(run, r["width"] / 2.0 + CARVE_MARGIN, CARVE_BLEND, weights)
-        terrain.apply_blend(weights, terrain.previous, terrain.previous_shift)
-
     @classmethod
     def load(cls, path, custom="auto", zoning=True, terrain=True):
         """Load a map file. `custom` is a custom-buildings file (default: custom_buildings.json beside the map).
@@ -322,6 +392,8 @@ class World:
                     print(line)
             except (ValueError, json.JSONDecodeError) as e:
                 print("custom buildings ignored:", e)
+        from . import turnarounds                     # cul-de-sacs and highway U-turns (after every building is in)
+        print(turnarounds.add(data))
         from .terrain import Terrain
         elev = os.path.join(os.path.dirname(os.path.abspath(path)), "elevation.json")
         world = cls(data, terrain=Terrain.load(elev) if terrain else None)
@@ -424,7 +496,7 @@ class World:
     def deck_height(self, x, y, road):                # relative to the ground
         """Height of an overpass span of this road at (x, y) or None if (x, y) is not on its deck."""
         for sp in self._span_grid.get((int(x // CELL), int(y // CELL)), ()):
-            if sp["road"] is road:
+            if any(r is road for r in sp.get("roads", (sp["road"],))):
                 h = sp_height(sp, x, y)
                 if h is not None:
                     return h
