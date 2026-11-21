@@ -78,16 +78,24 @@ class BattleTests(unittest.TestCase):
     def setUp(self):
         self.game = Game(WORLD, 2, deterministic=True, traffic=0)
         self.game._begin("battle")
-        self.b = self.game.two
+        self.b = B.Battle(self.game, "balloon", 2, seed=1)                # seeded: the same start every run
+        self.game.two = self.b
 
     def step(self, n=1, inputs=None):
         for _ in range(n):
             self.b.step(1 / 60, inputs or [IDLE, IDLE])
 
     def face_off(self, gap=12.0):
-        """Player 2 parked `gap` m in front of player 1, both stopped."""
+        """Both cars stopped on a straight road with nothing between them, player 2 `gap` m in front of player 1
+        (random start spots could put a building in the way of a shot)."""
+        from game.ai import clear_line
+        g = self.game.town.graph
+        e = next(e for e in sorted(g.edges, key=lambda e: -e.length)
+                 if e.length > gap + 12.0 and clear_line(WORLD, e.ax, e.ay, e.ax + e.dx * (gap + 6), e.ay + e.dy * (gap + 6)))
         a, b = self.b.cars
-        b.x, b.y = a.x + math.cos(a.heading) * gap, a.y + math.sin(a.heading) * gap
+        h = math.atan2(e.dy, e.dx)
+        a.x, a.y, a.heading = e.ax + e.dx * 3.0, e.ay + e.dy * 3.0, h
+        b.x, b.y, b.heading = a.x + e.dx * gap, a.y + e.dy * gap, h
         for c in (a, b):
             c.vx = c.vy = 0.0
 
