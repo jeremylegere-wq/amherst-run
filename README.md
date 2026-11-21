@@ -122,7 +122,7 @@ Press ESC to quit. For a window instead, set `FULLSCREEN = False` in `game/confi
 
 Useful options: `--style retro` (chunky flat-shaded look with banded fog; the default `street` style is cel-shaded with ink outlines),
 `--view top` (start top-down), `--traffic 0` (no civilian cars), `--no-cops` (cop-free), `--no-zoning`, `--flat` (ignore real elevation: faster), `--weather snow` (clear/overcast/fog/golden/snow), `--heat 2` (start with two wanted stars),
-`--seed 7` (different traffic), `--map data/sample_map.json` (the small test town), `--no-joy` (ignore gamepads),
+`--seed 7` (different traffic), `--start X,Y` (start on the road nearest that map point, in metres), `--map data/sample_map.json` (the small test town), `--no-joy` (ignore gamepads),
 `--version`.
 
 ### Batocera (Xbox-style controller)
@@ -237,7 +237,8 @@ Dominion Building, banks, churches, the County Museum, the border welcome lighth
 red sandstone downtown. You start in a driveway on a residential street in the north-east of town; the start point and
 any hand-placed trees live in `data/map_edits.json` (see [docs/EDITOR.md](docs/EDITOR.md)). Press M in the game for the labelled town map. The round minimap (top right) shows the streets around you, the green sign
 at the bottom names the street you are on and the white "MAX" sign shows its limit. Highway 104 crosses Highway 2 (Exit 4)
-and Highway 6 (Exit 3) on overpasses you can drive over and under.
+and Highway 6 (Exit 3) on overpasses you can drive over and under. Where a street just stops there is a cul-de-sac to
+turn round in, and at both map edges Highway 104 loops round onto its other carriageway so you can head back.
 
 Streets come from the Nova Scotia Road Network (names, one-ways, bridges); buildings, parks and landmarks come from
 OpenStreetMap. The NSRN has no speed limits, so limits are estimates by road class; set real ones in
@@ -259,7 +260,9 @@ Amherst is not flat. `data/elevation.json` (included) holds real ground heights 
 bare-earth model (`python tools/fetch_lidar_ground.py` rebuilds it from the survey's 8 m overview): road cuts, the rail
 embankment, river banks and the drop at the Pumping Station dam are real shapes. The game draws the land in 25 m cells,
 split into the fine ones within 75 m of you; roads, buildings, trees and cars sit on it, and you speed up downhill and
-slow uphill. Under the highway overpasses the smooth older grid is used, since the game builds its own ramps and decks.
+slow uphill. At load every road is graded into that ground the way real roads are built: narrow gullies filled, short
+humps cut and the profile smoothed (`game/grading.py`), so roads flow and junctions meet; overpass decks run straight
+between their embankments. `python tools/road_check.py` drives every road and reports anything a car would hit.
 `--flat` ignores the heights (faster on slow machines). `python tools/fetch_elevation.py` makes the older 25 m grid
 (Terrain Tiles); `python update_map.py` fetches it the first time if it is missing.
 `--radius 4000` limits it to the area around the spawn point; `--from-asc FILE` uses your own ESRI ASCII grid in
