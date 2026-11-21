@@ -83,23 +83,35 @@ def clear_line(world, x0, y0, x1, y1, step=4.0):
     return True
 
 
-def obstacle_limit(car, others, look=16.0, width=2.3):
-    """Highest safe speed given cars ahead in a narrow cone (1e9 if the road is clear)."""
+FOLLOW_GAP = 6.5         # metres nose-to-nose kept to a stopped car ahead (cars are ~4.2 m long)
+FOLLOW_GAIN = 0.8        # m/s of speed allowed per metre of gap beyond that (about a 1.25 s time gap)
+PREDICT = 0.9            # seconds: where other cars will be, so one crossing our path is seen in time
+
+
+def obstacle_limit(car, others, look=None, width=2.3):
+    """Highest safe speed given cars ahead (1e9 if the road is clear). Looks further the faster the car goes, and
+    checks both where each other car is and where it will be in PREDICT seconds, so a car crossing or merging in front
+    is braked for before it is in the lane."""
     fx, fy = car.forward
     rx, ry = car.right
+    if look is None:
+        look = max(16.0, min(45.0, 10.0 + car.speed * 2.2))
     limit = 1e9
     for o in others:
         if o is car:
             continue
         dx, dy = o.x - car.x, o.y - car.y
-        f = dx * fx + dy * fy
-        if f < 0.5 or f > look:
+        if abs(dx) > look + 15.0 or abs(dy) > look + 15.0:
             continue
-        if abs(dx * rx + dy * ry) > width:
-            continue
-        v = max(0.0, f - 4.4) * 1.3 + max(0.0, o.vx * fx + o.vy * fy)
-        if v < limit:
-            limit = v
+        lead = max(0.0, o.vx * fx + o.vy * fy)                       # its speed along our direction
+        for t in (0.0, PREDICT):
+            px, py = dx + o.vx * t, dy + o.vy * t
+            f = px * fx + py * fy - car.speed * t * (t > 0)         # where we will be by then, too
+            if f < 0.5 or f > look or abs(px * rx + py * ry) > width:
+                continue
+            v = max(0.0, f - FOLLOW_GAP) * FOLLOW_GAIN + (lead if t == 0.0 else 0.0)
+            if v < limit:
+                limit = v
     return limit
 
 

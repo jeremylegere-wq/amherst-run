@@ -275,10 +275,26 @@ class TrafficTests(unittest.TestCase):
         car.vx = 12.0
         blocker = Car(10.0, 0.0, 0.0)
         self.assertLess(ai.obstacle_limit(car, [car, blocker]), 8.0)
-        far = Car(40.0, 0.0, 0.0)
+        far = Car(60.0, 0.0, 0.0)                                  # beyond the speed-scaled look-ahead
         self.assertGreater(ai.obstacle_limit(car, [car, far]), 1e8)
         beside = Car(8.0, 6.0, 0.0)
         self.assertGreater(ai.obstacle_limit(car, [car, beside]), 1e8)
+
+    def test_traffic_sees_a_car_about_to_cross_its_path(self):
+        car = AICar("traffic", PAL_TRAFFIC[0], 0.0, 0.0, 0.0)
+        car.vx = 12.0
+        crosser = Car(16.0, -9.0, math.pi / 2)                     # 9 m to the side, heading across our lane
+        crosser.vy = 10.0
+        self.assertLess(ai.obstacle_limit(car, [car, crosser]), 12.0)
+        away = Car(16.0, -9.0, -math.pi / 2)                       # same spot, driving away from our lane
+        away.vy = -10.0
+        self.assertGreater(ai.obstacle_limit(car, [car, away]), 1e8)
+
+    def test_quiet_roads_get_fewer_cars(self):
+        world = World(make_sample_map.build())
+        town = Town(world, seed=1, traffic=16)
+        lone = Car(1e5, 1e5, 0.0)                                  # nowhere near a road
+        self.assertEqual(town.local_target(lone), 3)
 
 
 class PoliceTests(unittest.TestCase):

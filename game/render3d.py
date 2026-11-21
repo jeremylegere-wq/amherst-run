@@ -743,7 +743,8 @@ class Renderer3D:
         return HH - self.focal * yc / depth
 
     # ---------------------------------------------------------------- frame
-    def render(self, surf, car, cam, others=(), t=0.0, markers=(), trains=()):
+    def render(self, surf, car, cam, others=(), t=0.0, markers=(), trains=(), extras=()):
+        """extras: battle-mode things (game/battle.py extras(): balloons, item boxes, pucks, seekers, slicks)."""
         self._set_camera(cam)
         self.time = t
         self.polys = 0
@@ -767,7 +768,7 @@ class Renderer3D:
         else:
             for c in grounded:
                 self._draw_shadow(surf, c)
-        self._draw_objects(surf, car, cars, markers, trains)
+        self._draw_objects(surf, car, cars, markers, trains, extras)
         if self.st.get("snowfall"):
             self._draw_snowfall(surf)
 
@@ -1168,7 +1169,7 @@ class Renderer3D:
         surf.blit(layer, (0, 0))
 
     # -------------------------------------------------------------- objects
-    def _draw_objects(self, surf, car, cars, markers=(), trains=()):
+    def _draw_objects(self, surf, car, cars, markers=(), trains=(), extras=()):
         cx, cy = self.cx, self.cy
         fhx, fhy, rx, ry = self.fhx, self.fhy, self.rx, self.ry
         objs = []
@@ -1202,6 +1203,10 @@ class Renderer3D:
             dx, dy = u.x - cx, u.y - cy
             if dx * dx + dy * dy < DRAW_DIST * DRAW_DIST and dx * fhx + dy * fhy > -u.length:
                 objs.append((math.hypot(dx, dy), 6, u))
+        for e in extras:                        # battle items, sorted with everything else
+            dx, dy = e["x"] - cx, e["y"] - cy
+            if dx * dx + dy * dy < PROP_DIST * PROP_DIST and dx * fhx + dy * fhy > -4.0:
+                objs.append((math.hypot(dx, dy) - (0.3 if e["kind"] == "balloon" else 0.0), 7, e))
         for m in markers:                       # mission beacons show from further away than buildings
             dx, dy = m["x"] - cx, m["y"] - cy
             d = math.hypot(dx, dy)
@@ -1227,7 +1232,7 @@ class Renderer3D:
                     ox, oy = self.buildings[obj][0], self.buildings[obj][1]
                     near = math.hypot(ox - self.cx, oy - self.cy) - self.buildings[obj][6]
                     oz = self._building_ground(obj)[0]
-                elif kind in (2, 3):
+                elif kind in (2, 3, 7):
                     ox, oy = obj["x"], obj["y"]
                     near = dist - 1.5
                     oz = None
@@ -1277,6 +1282,11 @@ class Renderer3D:
             self.cz += g
         elif kind == 4:
             self._draw_deck_piece(surf, obj, dist - 11.0)
+        elif kind == 7:
+            g = 0.0 if flat else self._g(obj["x"], obj["y"])
+            self.cz -= g
+            self._draw_battle_thing(surf, obj, dist)
+            self.cz += g
         else:
             z = getattr(obj, "z", 0.0)
             if z > 0.01:                    # raised car: same as lowering the camera by z
@@ -2289,6 +2299,40 @@ class Renderer3D:
             else:
                 self._draw_box(surf, fr, -0.25, 0.25, -0.8, 0.8, 0.0, 0.45, dark, wood, fog, ink)          # seat
                 self._draw_box(surf, fr, -0.3, -0.22, -0.8, 0.8, 0.45, 0.95, wood, wood, fog, ink)         # back
+
+    def _draw_battle_thing(self, surf, e, dist):
+        """Balloons, item boxes, pucks, seekers and oil slicks (game/battle.py)."""
+        fog = min(self.fog_band(dist), 3)
+        ink = self.ink(fog)
+        x, y, kind = e["x"], e["y"], e["kind"]
+        if kind == "balloon":
+            string = self.project_poly([(e["ax"], e["ay"], 1.6), (x, y, e["z"] - 0.35), (x, y, e["z"] - 0.36)])
+            if string:
+                pygame.draw.line(surf, ink or (20, 20, 30), string[0][0], string[0][1])
+            self._disc(surf, x, y, e["z"], 0.38, self.col(e["colour"], 3, fog), ink, 10)
+        elif kind == "box":
+            fr = _Frame(x, y, e["spin"])
+            z0 = 0.9 + 0.2 * math.sin(e["spin"] * 2.0)
+            gold, white = (255, 206, 60), (250, 250, 250)
+            self._draw_box(surf, fr, -0.65, 0.65, -0.65, 0.65, z0, z0 + 1.3, gold, white, fog, ink)
+            self._draw_box(surf, fr, -0.2, 0.2, -0.68, 0.68, z0 + 0.45, z0 + 0.85, (210, 60, 200), (210, 60, 200), fog)
+        elif kind in ("puck", "seeker"):
+            fr = _Frame(x, y, e.get("spin", 0.0))
+            c = e["colour"]
+            r = 0.45 if kind == "puck" else 0.4
+            self._draw_box(surf, fr, -r, r, -r, r, 0.15, 0.5 if kind == "puck" else 0.75, c, c, fog, ink)
+            if kind == "seeker":
+                self._draw_box(surf, fr, -0.1, 0.1, -0.5, 0.5, 0.75, 0.95, (250, 250, 250), (250, 250, 250), fog, ink)
+        elif kind == "slick":
+            r = e["r"]
+            pts = [(x + r * (1.0 + 0.18 * math.sin(k * 2.7)) * math.cos(k * math.pi / 6),
+                    y + r * (0.85 + 0.15 * math.cos(k * 1.9)) * math.sin(k * math.pi / 6), 0.06) for k in range(12)]
+            pr = self.project_poly(pts)
+            if pr:
+                pygame.draw.polygon(surf, self.col((34, 30, 40), 3, fog), pr[0])
+                hl = self.project_poly([(x - 0.3, y - 0.2, 0.07), (x + 0.2, y - 0.35, 0.07), (x + 0.1, y - 0.1, 0.07)])
+                if hl:
+                    pygame.draw.polygon(surf, self.col((120, 110, 160), 3, fog), hl[0])
 
     def _draw_marker(self, surf, m, dist):
         """Mission beacon: a ring on the road, a tall light column and a bobbing diamond."""

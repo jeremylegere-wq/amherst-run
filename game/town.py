@@ -18,7 +18,7 @@ from .roadgraph import RoadGraph
 
 CONTROL_DT = 0.05            # AI decisions per second = 20
 MANAGE_DT = 0.25             # spawn / despawn checks
-TRAFFIC_DESPAWN = 250.0
+TRAFFIC_DESPAWN = 260.0
 POLICE_DESPAWN = 320.0
 MAX_HEAT = 4.0
 PACE_MIN, PACE_MAX = 0.88, 1.06   # civilian drivers aim for this fraction of the posted limit
@@ -33,17 +33,22 @@ BUSTED_TIME = 2.5
 RESET_DELAY = 3.5
 DAMAGE_PER_MS = 1.2          # damage per m/s of impact above the free 3 m/s
 TRAFFIC_W = {"main": 3.0, "side": 2.0, "lane": 0.3}
+TRAFFIC_AREA = 200.0         # metres: road length within this radius sets how busy the streets are
+DENSE_ROAD_M = 4400.0        # this much road nearby (downtown's grid) gets the full traffic target
+MIN_TRAFFIC = 3              # even a quiet rural road sees the odd car
+SPAWN_MIN, SPAWN_MAX = 150.0, 230.0   # new cars appear this far away, so they do not pop into view
 POLICE_W = {"main": 3.0, "side": 2.0, "lane": 0.0}
 
 
 class Town:
-    def __init__(self, world, graph=None, seed=1, traffic=24, cops=True):
+    def __init__(self, world, graph=None, seed=1, traffic=16, cops=True):
         self.world = world
         self.graph = graph or RoadGraph(world.roads)
         self.junctions = Junctions(self.graph, getattr(world, "marks", ()))   # lights, stop signs, right of way
         self.rng = random.Random(seed)
         self.traffic_target = traffic
         self.extra = []                   # more human players (split screen); traffic is kept around all of them
+        self._density = {}                # 100 m cell -> how busy its streets are (local_target)
         self.cops = cops                  # False = cop-free mode: no police, no heat, no busting
         self.reset()
 
@@ -223,18 +228,31 @@ class Town:
             for c in self.police)
 
         n = sum(1 for c in self.cars if c.kind == "traffic")
-        budget = self.traffic_target - n
+        budget = self.local_target(player) - n
         tries = 0
         while budget > 0 and tries < (40 if fill else 8):
             tries += 1
             focus = self.rng.choice([player] + self.extra) if self.extra else player
-            if self._spawn_traffic(focus, 30.0 if fill else 110.0, 190.0):
+            if self._spawn_traffic(focus, 30.0 if fill else SPAWN_MIN, 190.0 if fill else SPAWN_MAX):
                 budget -= 1
 
         if self.state == "playing" and self.heat > 0.0 and self.spawn_cd <= 0.0 \
                 and len(self.police) < min(4, self.stars):
             if self._spawn_police(player):
                 self.spawn_cd = 2.5
+
+    def local_target(self, player):
+        """How many civilian cars to keep around: the full target where streets are dense (downtown), fewer where
+        there is little road (the rural loop), worked out from the road length within TRAFFIC_AREA metres."""
+        if self.traffic_target <= 0:
+            return 0
+        cell = (int(player.x // 100), int(player.y // 100))
+        if cell not in self._density:
+            g = self.graph
+            total = sum(g.edges[i].length for i in g.edges_near(player.x, player.y, TRAFFIC_AREA)
+                        if g.edges[i].rtype != "lane")
+            self._density[cell] = min(1.0, total / DENSE_ROAD_M)
+        return max(MIN_TRAFFIC, round(self.traffic_target * self._density[cell]))
 
     def _occupied(self, x, y, player):
         if self.world.in_building(x, y):

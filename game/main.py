@@ -32,6 +32,7 @@ from .render3d import WEATHER, ChaseCamera, Renderer3D
 from .touch import TouchControls
 from .town import Town
 from .train import Train
+from .battle import Battle
 from .twoplayer import TwoPlayer
 from .world import World
 
@@ -44,7 +45,7 @@ HUD_YELLOW = (252, 222, 48)
 
 
 class Game:
-    def __init__(self, world, scale, deterministic=False, traffic=24, seed=1, style="street", cops=True, trains=True, touch=False, no_joy=False, debug_input=False,
+    def __init__(self, world, scale, deterministic=False, traffic=16, seed=1, style="street", cops=True, trains=True, touch=False, no_joy=False, debug_input=False,
                  weather="clear"):
         pygame.init()
         self.world = world
@@ -135,10 +136,11 @@ class Game:
 
     def _begin(self, mode):
         """Set up a fresh game: "1p" = the full game, "2p"/"3p"/"4p" = split screen free roam (no police, no jobs)."""
-        humans = int(mode[0]) if mode[0] in "234" else 1
+        battle = mode in ("battle", "sprint")
+        humans = 2 if battle else (int(mode[0]) if mode[0] in "234" else 1)
         two = humans > 1
         self.mode, self.two = mode, None
-        self.town = Town(self.world, seed=self._seed, traffic=max(self._traffic, 22 + 6 * humans) if two else self._traffic,
+        self.town = Town(self.world, seed=self._seed, traffic=max(self._traffic, 12 + 4 * humans) if two else self._traffic,
                          cops=self._cops and not two)
         self.missions = MissionManager(self.world, self.town, seed=self._seed)
         self.train = Train(self.world, seed=self._seed, enabled=self._trains)
@@ -147,7 +149,9 @@ class Game:
         self.cam = ChaseCamera(self.car, self.world)
         self.view3d, self.overview = True, False
         self.r3d.set_viewport(C.INTERNAL_W, C.INTERNAL_H)
-        if two:
+        if battle:
+            self.two = Battle(self, "balloon" if mode == "battle" else "sprint", humans)
+        elif two:
             self.two = TwoPlayer(self, humans)
 
     def menu_loop(self):
@@ -874,11 +878,13 @@ def main():
     ap.add_argument("--autodrive", action="store_true", help="scripted driving for tests")
     ap.add_argument("--overview", action="store_true", help="start in whole-map view")
     ap.add_argument("--view", choices=("3d", "top"), default="3d", help="starting camera view")
-    ap.add_argument("--traffic", type=int, default=24, help="number of civilian cars (0 for none)")
+    ap.add_argument("--traffic", type=int, default=16, help="civilian cars around you downtown (fewer on quiet roads; 0 for none)")
     ap.add_argument("--heat", type=float, default=0.0, help="start with this wanted level (0-4)")
     ap.add_argument("--no-zoning", action="store_true", help="skip the zoning-based building looks (data/zoning.json)")
     ap.add_argument("--players", type=int, choices=(1, 2, 3, 4), default=None, help="skip the start screen: 1 = the game, 2 = split screen free roam")
     ap.add_argument("--no-menu", action="store_true", help="skip the start screen (same as --players 1)")
+    ap.add_argument("--vs", choices=("battle", "sprint"), default=None,
+                    help="skip the start screen into 2 player battle (balloons) or a VS race to a landmark")
     ap.add_argument("--no-train", action="store_true", help="no train on the rail line")
     ap.add_argument("--weather", choices=sorted(WEATHER), default="clear",
                     help="weather / time of day: clear, overcast, fog, golden (hour) or snow (F4 cycles in game)")
@@ -901,10 +907,10 @@ def main():
     game.view3d = args.view == "3d"
     if args.heat:
         game.town.add_heat(args.heat)
-    show_menu = args.players is None and not args.no_menu and args.frames is None and not args.autodrive
+    show_menu = args.players is None and args.vs is None and not args.no_menu and args.frames is None and not args.autodrive
     try:
         game.run(frames=args.frames, screenshot=args.screenshot, autodrive=args.autodrive, menu=show_menu,
-                 mode="%dp" % (args.players or 1))
+                 mode=args.vs or "%dp" % (args.players or 1))
     except Exception:
         show_crash(write_crash_log())             # Batocera and Android hide errors: file + on-screen copy
         raise

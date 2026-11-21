@@ -16,6 +16,8 @@ OPTIONS = (
     ("2 PLAYER", "2p", "Split screen free roam. No police at all"),
     ("3 PLAYER", "3p", "Player 1 gets the top half, 2 and 3 share the bottom"),
     ("4 PLAYER", "4p", "Four way split screen. Bumpers hop and drift for a boost"),
+    ("BATTLE", "battle", "2 players: item boxes downtown, pop the other car's balloons"),
+    ("VS RACE", "sprint", "2 players race to a random Amherst landmark, items on the way"),
     ("QUIT", None, ""),
 )
 YELLOW = (252, 222, 48)
@@ -34,7 +36,8 @@ class _Cam:
 
 def rect_of(index, count=len(OPTIONS)):
     """Clickable rectangle of option `index` in the 320x180 picture."""
-    return pygame.Rect(70, 62 + index * 17, 180, 15)
+    step = 17 if count <= 5 else 15                  # seven options still fit the 180-line picture
+    return pygame.Rect(70, 62 - (count > 5) * 6 + index * step, 180, step - 2)
 
 
 class Menu:

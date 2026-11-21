@@ -10,6 +10,13 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 ## [Unreleased]
 
 ### Added
+- Two-player BATTLE (balloon battle downtown) and VS RACE (race to a random landmark under a light beacon) on the
+  start screen, or `--vs battle` / `--vs sprint`: item boxes at junctions with original items (puck, seeker, oil slick,
+  turbo can, ghost mode, triple puck), balloons, spin-outs, rams, per-player HUD with item window, balloons or
+  distance and arrow, speed and radar; Tab switches top/bottom and left/right split; synthesized sound effects.
+- Traffic is lighter and smarter: fewer cars where there is less road (default 16 downtown, ~5 on rural roads), new
+  cars appear 150-230 m away, and drivers keep a speed-scaled gap and see cars crossing their path (AI-vs-AI crashes
+  downtown in 90 s: 29 -> 3). `tools/traffic_check.py` measures it.
 - The Pumping Station dam on the river east of town (reference photo + LiDAR: a ~6 m drop along a 50 m crest): the
   spillway with its falling water and white water below, the sluice, gate piers with catwalk and red handwheels, and
   the timber-baffled fish ladder down the north bank. Solid along its crest.
