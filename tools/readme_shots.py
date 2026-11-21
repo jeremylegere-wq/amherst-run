@@ -90,6 +90,19 @@ def raised(i, bearing, back=55.0, up=28.0, t=12.0):
     return surf
 
 
+def look_at(tx, ty, bearing, back, up, look_z=4.5, t=12.0):
+    """Camera `back` metres from point (tx, ty) towards compass `bearing`, `up` metres high, looking at it."""
+    b = math.radians(bearing)
+    cx, cy = tx + math.sin(b) * back, ty - math.cos(b) * back
+    gz = WORLD.ground(tx, ty)
+    cam = types.SimpleNamespace(x=cx, y=cy, z=gz + up, yaw=math.atan2(ty - cy, tx - cx), pitch=math.atan2(up - look_z, back))
+    car = player_car(0, cx, cy, cam.yaw)
+    car.z = -100.0
+    surf = pygame.Surface((C.INTERNAL_W, C.INTERNAL_H))
+    renderer().render(surf, car, cam, t=t)
+    return surf
+
+
 def save(name, surf, scale=SCALE):
     path = os.path.join(OUT, name + ".png")
     pygame.image.save(pygame.transform.scale(surf, (surf.get_width() * scale, surf.get_height() * scale)), path)
@@ -182,6 +195,26 @@ def shot_weather():
 
 def shot_splitscreen():
     save("splitscreen", game_frame("--players", "4", "--autodrive"))
+
+
+def shot_battle():
+    save("battle", game_frame("--vs", "battle"))
+
+
+def shot_dam():
+    save("dam", look_at(4451.0, 1962.0, 262, 34, 3))
+
+
+def shot_lighthouse():
+    save("lighthouse", look_at(-3335.0, -3212.0, 30, 24, 3))
+
+
+def shot_murals():
+    save("murals", grid([look_at(414.9, -911.7, 118, 26, 3), look_at(400.4, -983.4, 25, 28, 3)], 2), scale=2)
+
+
+def shot_parking():
+    save("parking", look_at(1356.0, 1593.0, 200, 60, 16, look_z=0.0))
 
 
 def shot_top():

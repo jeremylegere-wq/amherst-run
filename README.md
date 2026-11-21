@@ -16,8 +16,13 @@ with on-screen touch controls.
 ### What is real
 - **Streets** from the Nova Scotia Road Network: real names, one-ways, overpasses on Highway 104, speed limits.
 - **Buildings, parks and landmarks** from OpenStreetMap: the red sandstone downtown, the Court House, Victoria Square
-  and its war memorial, the Dominion Building, churches, banks, the County Museum, the Welcome Centre lighthouse, and the
-  wind turbines on the marsh skyline.
+  and its war memorial, the Dominion Building, churches, banks, the County Museum, the border welcome lighthouse at
+  Highway 104 Exit 1, the Pumping Station dam, and the wind turbines on the marsh skyline.
+- **The country roads east of town**: the loop out Church St and Hastings Rd round to Highway 6, and on toward Warren
+  and Tyndal Road, with every rural home placed where the LiDAR survey shows its roof (OpenStreetMap maps few of them).
+- **Parking lots** from OpenStreetMap: the mall, Walmart, the Superstore and the high school lots are open pavement
+  with painted stalls, not a tangle of driveways.
+- **Downtown murals**: the North Nova Scotia Highlanders memorial and The Great Amherst Mystery, as simplified panels.
 - **Building heights and roof shapes** measured from a 2020 LiDAR survey: every house's real height, and whether
   its roof is flat, gabled (either way round) or hipped.
 - **Hills** from real elevation data: downtown sits on its ridge, the Tantramar marsh is flat at sea level.
@@ -42,6 +47,15 @@ with on-screen touch controls.
 | Police chases with a wanted level | 2, 3 or 4 player split screen |
 | ![Top-down view](docs/images/top.png) | ![Weather presets](docs/images/weather.png) |
 | Top-down view (V) | Clear, overcast, coastal fog / golden hour, snow, and the flat-shaded retro style |
+| ![Balloon battle](docs/images/battle.png) | ![The Pumping Station dam](docs/images/dam.png) |
+| Two player balloon battle: item boxes downtown, the rival's balloons, radar | The Pumping Station dam: spillway, gate works and fish ladder |
+| ![The border welcome lighthouse](docs/images/lighthouse.png) | ![The mall parking lot](docs/images/parking.png) |
+| The welcome lighthouse and sign at Highway 104 Exit 1 | Open parking lots with painted stalls (the mall) |
+
+![Downtown murals](docs/images/murals.png)
+
+The North Nova Scotia Highlanders memorial on the Town Hall and The Great Amherst Mystery on LaPlanche St (simplified
+panels of the real murals).
 
 ## How Amherst was built
 The town is assembled in layers, each from the best source available, and each layer can be refreshed with its own tool:
@@ -132,7 +146,7 @@ controls behave. On a desktop, `python -m game.main --touch` shows the same butt
 ## Start screen and multiplayer
 
 The game opens on a start screen: **1 Player** is the full game; **2, 3 or 4 Player** is split screen free roam with no
-police, no jobs and no damage. Use the arrows or W/S and Enter (or 1-4), a gamepad D-pad and A, or tap/click an option.
+police, no jobs and no damage; **Battle** and **VS Race** are two player modes with items (below). Use the arrows or W/S and Enter (or 1-4), a gamepad D-pad and A, or tap/click an option.
 ESC goes back to the start screen. `--players 2|3|4` jumps straight in; `--no-menu` jumps into 1 player.
 With 3 players, player 1 gets the whole top half and players 2 and 3 share the bottom.
 
@@ -146,6 +160,26 @@ With 3 players, player 1 gets the whole top half and players 2 and 3 share the b
 Pads go to the LAST players first: with two players and one pad the pad drives player 2 and the keyboard keeps player 1.
 On a pad A is handbrake, **LB or RB hop**, Start respawns. A freight train passes along the rail line every few minutes
 (`--no-train` turns it off). The vehicles are original low-poly designs with no badges.
+
+### Battle and VS race (2 players)
+
+**Battle** is a balloon battle downtown: three balloons each, trailing behind your car. Item boxes wait at junctions
+(back 8 s after you take one); a shot, a slick or a hard ram pops a balloon, and the last car with a balloon wins.
+**VS Race** starts you side by side somewhere in town and sends you both to a random landmark (Victoria Square, the
+Court House, the Dominion Building, the mall, the Pumping Station dam or the border lighthouse) under a tall beacon;
+the HUD shows the distance and an arrow, and items slow the other car down. `--vs battle` or `--vs sprint` skips the
+start screen. Tab splits the screen top/bottom (default) or left/right; Enter or Start after a win is a rematch.
+
+| | Drive | Hop and drift | Use item |
+|---|---|---|---|
+| Player 1 | W/A/S/D | Space | E or Left Shift |
+| Player 2 | Arrow keys | Right Shift or Enter | / or Right Ctrl |
+| Gamepad | Left stick or D-pad | A, LB or RB | X or B |
+
+Items (all original): **Puck** flies straight and bounces off buildings up to four times; **Seeker** homes on the
+other car; **Oil slick** drops behind you and spins out whoever drives over it; **Turbo can** is a two second burst
+(ram while it lasts to pop a balloon); **Ghost mode** makes you untouchable and faster for six seconds; **Triple puck**
+circles your car, blocks incoming shots and fires one at a time.
 
 ### Hop and drift boost (all modes)
 
@@ -199,7 +233,7 @@ every time). They are solid, so mind the trunks.
 ## Maps and landmarks
 The release includes a converted Amherst map (`data/amherst_map.json`) and the landmark list
 (`data/landmarks_amherst.json`): the Court House (with an optional clock tower), Victoria Square and its war memorial, the
-Dominion Building, banks, churches, the County Museum, the Welcome Centre lighthouse, the wind farms on the skyline and a
+Dominion Building, banks, churches, the County Museum, the border welcome lighthouse, the wind farms on the skyline and a
 red sandstone downtown. You start in a driveway on a residential street in the north-east of town; the start point and
 any hand-placed trees live in `data/map_edits.json` (see [docs/EDITOR.md](docs/EDITOR.md)). Press M in the game for the labelled town map. The round minimap (top right) shows the streets around you, the green sign
 at the bottom names the street you are on and the white "MAX" sign shows its limit. Highway 104 crosses Highway 2 (Exit 4)

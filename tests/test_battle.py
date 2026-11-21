@@ -163,6 +163,9 @@ class BattleTests(unittest.TestCase):
         self.b.draw()
         kinds = {e["kind"] for e in self.b.extras()}
         self.assertTrue({"balloon", "box"} <= kinds)
+        own = [e for e in self.b.extras(viewer=0) if e["kind"] == "balloon"]
+        self.assertEqual(len(own), 3)                                       # only the rival's three
+        self.assertTrue(all(e["colour"] == B.BALLOON_COLOURS[1] for e in own))
 
 
 class SprintTests(unittest.TestCase):

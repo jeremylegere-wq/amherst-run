@@ -449,11 +449,13 @@ class Battle(TwoPlayer):
             sfx.play("win")
 
     # --- drawing -------------------------------------------------------------
-    def extras(self):
-        """Things the renderer draws in 3D for this battle: balloons, boxes, shots, slicks, orbiting pucks."""
+    def extras(self, viewer=None):
+        """Things the renderer draws in 3D for this battle: balloons, boxes, shots, slicks, orbiting pucks. A player's
+        own balloons are left out of their own view (they would hang between the camera and the car; the HUD counts
+        them), the rival sees them."""
         out = []
         for i, (car, r) in enumerate(zip(self.cars, self.racers)):
-            if self.mode == "balloon" and r.balloons > 0 and not (r.safe > 0.0 and int(self.time * 10) % 2):
+            if self.mode == "balloon" and r.balloons > 0 and i != viewer and not (r.safe > 0.0 and int(self.time * 10) % 2):
                 bx, by = car.forward
                 for k in range(r.balloons):
                     side = (k - (r.balloons - 1) / 2) * 0.9
@@ -483,8 +485,9 @@ class Battle(TwoPlayer):
         g = self.game
         s, r3d = g.screen, g.r3d
         trains = g.train.units()
-        extras, markers = self.extras(), self.markers()
+        markers = self.markers()
         for i, (x, y, w, h) in enumerate(self.rects):
+            extras = self.extras(viewer=i)
             sub = s.subsurface((x, y, w, h))
             r3d.set_viewport(w, h)
             others = list(g.town.cars) + [c for j, c in enumerate(self.cars) if j != i]

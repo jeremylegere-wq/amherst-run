@@ -9,6 +9,9 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-21
+Two player battle and VS race modes, the country roads east of town, and more of Amherst's real places.
+
 ### Added
 - Open parking lots: 73 surface lots from OpenStreetMap (`tools/fetch_parking.py` -> `data/parking.json`, 23.8 ha)
   are drawn as paved areas with painted stall lines up close and count as road to drive on; driveway roads that ran
@@ -236,7 +239,8 @@ First public release.
 - The sandstone-corner bank entry in the landmark file matched every bank; it now matches by name only.
 - Buildings no longer draw through one another or through cars: each wall piece is depth-sorted on its own.
 
-[Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jeremylegere-wq/amherst-run/releases/tag/v0.1.0
