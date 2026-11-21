@@ -9,6 +9,15 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+### Added
+- More of the real landscape from OpenStreetMap (`tools/fetch_osm_extras.py` -> `data/osm_extras.json`): power lines
+  with their wooden poles and steel towers and the wires strung between them (1,615 on the map), rivers, streams and
+  ditches as water ribbons under the roads, land use as ground colour (farm fields, wetlands, meadows, grass, golf
+  courses, sports pitches with their lines, cemeteries with rows of gravestones), and fences, walls and hedges.
+
+### Fixed
+- Hand-placed and mapped scenery no longer uses up the street-tree budget (it pushed out about 5,600 trees).
+
 ## [0.3.1] - 2026-11-21
 Two player battle and VS race modes, the country roads east of town, and more of Amherst's real places.
 (Version 0.3.0 was tagged but never released: its release checks failed on a flaky test, fixed here.)

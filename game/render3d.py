@@ -194,6 +194,12 @@ HOUSE_DETAIL = 45.0       # metres: doors, windows, foundations and porches on h
 PROP_DIST = 130.0         # trees and lamps further than this are not drawn
 MURAL_DIST = 160.0        # wall murals (game/murals.py) are painted on within this distance
 STALL_DIST = 45.0         # parking stall lines are painted within this distance
+WIRE_DIST = 140.0         # power line wires are drawn within this distance
+AREA_COLOURS = {          # OSM land use (game/extras.py); blended towards each style's park colour
+    "grass": (110, 190, 84), "meadow": (150, 190, 92), "farmland": (196, 186, 118), "cemetery": (84, 150, 72),
+    "pitch": (88, 194, 80), "playground": (206, 180, 130), "track": (190, 96, 72), "golf": (104, 204, 92),
+    "wetland": (96, 140, 110), "scrub": (110, 140, 72), "sand": (226, 212, 160), "dirt": (160, 132, 98),
+}
 DETAIL_DIST = 95.0        # signs, hydrants, benches and the like
 DETAIL_KINDS = frozenset(SD.FURNITURE_KINDS)
 PAINT_DIST = 95.0         # road paint further than this is skipped (it is a pixel by then)
@@ -493,6 +499,12 @@ class Renderer3D:
         self.extras = {}            # building index -> material / landmark details
         self._parked_cars = None    # hand-placed parked cars as Car objects (see parked_cars)
         self._stalls = None         # painted stall lines per parking lot, made on first draw
+        self._water_grid = {}       # waterway segments by 50 m cell
+        for w in getattr(self.world, "waterways", ()):
+            for a, b in zip(w["points"], w["points"][1:]):
+                for gx in range(int(min(a[0], b[0]) // 50), int(max(a[0], b[0]) // 50) + 1):
+                    for gy in range(int(min(a[1], b[1]) // 50), int(max(a[1], b[1]) // 50) + 1):
+                        self._water_grid.setdefault((gx, gy), []).append((a, b, w["width"]))
         self._houses = {}           # building index -> house details (game/archetypes.py), worked out when first close
         self._shops = {}            # building index -> walls with a shop front (set), worked out when first close
         for i, b in enumerate(self.world.buildings):
@@ -1025,6 +1037,37 @@ class Renderer3D:
                     dx, dy = (b[0] - a[0]) / L, (b[1] - a[1]) / L
                     self._poly_fog(surf, self._quad(a[0], a[1], b[0], b[1], dx, dy, 1.3, 0.008, ext=0.0,
                                                     g0=self._g(a[0], a[1]), g1=self._g(b[0], b[1])), st["path"], 3)
+        # land use (game/extras.py): flat colour; sports pitches get their white outline
+        for ar in getattr(self.world, "areas", ()):
+            x0, y0, x1, y1 = ar["bbox"]
+            if x1 < self.cx - DRAW_DIST or x0 > self.cx + DRAW_DIST or y1 < self.cy - DRAW_DIST or y0 > self.cy + DRAW_DIST:
+                continue
+            rgb = _lerp_rgb(AREA_COLOURS.get(ar["kind"], AREA_COLOURS["grass"]), st["park"], 0.35)
+            pts = [(p[0], p[1], 0.003 + self._g(p[0], p[1])) for p in ar["points"]]
+            self._poly_fog(surf, pts, rgb, 3)
+            if ar["kind"] == "pitch" and max(x1 - x0, y1 - y0) < 180.0:
+                pr = self.project_poly(pts)
+                if pr and len(pr[0]) > 2:
+                    pygame.draw.polygon(surf, self.col((240, 244, 240), 3, 0), pr[0], 1)
+        # rivers, streams and ditches: water ribbons (roads are drawn over them: bridges and culverts)
+        if self._water_grid:
+            seen = set()
+            water = st["water"]
+            reach = int(DRAW_DIST // 50) + 1
+            gx0, gy0 = int(self.cx // 50), int(self.cy // 50)
+            for gx in range(gx0 - reach, gx0 + reach + 1):
+                for gy in range(gy0 - reach, gy0 + reach + 1):
+                    for seg in self._water_grid.get((gx, gy), ()):
+                        if id(seg) in seen:
+                            continue
+                        seen.add(id(seg))
+                        (ax, ay), (bx, by), wd = seg
+                        L = math.hypot(bx - ax, by - ay)
+                        if L < 0.1 or math.hypot((ax + bx) / 2 - self.cx, (ay + by) / 2 - self.cy) > DRAW_DIST + L / 2:
+                            continue
+                        dx, dy = (bx - ax) / L, (by - ay) / L
+                        self._poly_fog(surf, self._quad(ax, ay, bx, by, dx, dy, wd / 2, 0.006, ext=wd / 2,
+                                                        g0=self._g(ax, ay), g1=self._g(bx, by)), water, 3)
         # open parking lots (game/parking.py): asphalt, with painted stall lines up close
         lots = getattr(self.world, "lots", ())
         if lots:
@@ -1187,7 +1230,7 @@ class Renderer3D:
             if pr:
                 pygame.draw.polygon(layer, rgba, pr[0])
         for p in self.world.props_near(cx, cy, 100.0, far=0) if hasattr(self.world, "props_near") else ():
-            if p["kind"] in ("lamp", "car_block", "fence") or p["kind"] in DETAIL_KINDS or (p["x"] - cx) * fhx + (p["y"] - cy) * fhy < -10.0:
+            if p["kind"] in ("lamp", "car_block", "fence", "pole", "tower") or p["kind"] in DETAIL_KINDS or (p["x"] - cx) * fhx + (p["y"] - cy) * fhy < -10.0:
                 continue
             ox, oy, rr = p["x"] + sdx * p["h"] * 0.6, p["y"] + sdy * p["h"] * 0.6, p["r"] * 0.9
             gz = self._g(p["x"], p["y"]) + 0.05
@@ -2102,6 +2145,8 @@ class Renderer3D:
                        self.col(tuple(p.get("colour") or (120, 122, 128)), 2, fog), ink)
         elif p["kind"] == "fence":
             self._draw_fence(surf, p, fog, ink)
+        elif p["kind"] in ("pole", "tower"):
+            self._draw_power(surf, p, dist, fog, ink)
         elif p["kind"] == "dam":
             self._draw_dam(surf, p, fog, ink)
         elif p["kind"] in DETAIL_KINDS:
@@ -2271,6 +2316,51 @@ class Renderer3D:
             for draw in (ladder, curtain, spillway, works, reservoir):
                 draw()
 
+    def _draw_power(self, surf, p, dist, fog, ink):
+        """A wooden utility pole with a crossarm, or a steel lattice tower, and the wires to the next one."""
+        x, y, h = p["x"], p["y"], p["h"]
+        to = p.get("to")
+        if to:
+            L = math.hypot(to[0] - x, to[1] - y) or 1.0
+            ax, ay = -(to[1] - y) / L, (to[0] - x) / L                  # crossarm: across the line
+        else:
+            ax, ay = 1.0, 0.0
+        if p["kind"] == "pole":
+            wood = self.col((112, 96, 80), 2, fog)
+            pole = self._billboard(x, y, 0.0, h, 0.13)
+            if pole:
+                self._emit(surf, pole, wood, ink)
+            arm = self.project_poly([(x - ax * 1.1, y - ay * 1.1, h - 0.75), (x + ax * 1.1, y + ay * 1.1, h - 0.75),
+                                     (x + ax * 1.1, y + ay * 1.1, h - 0.55), (x - ax * 1.1, y - ay * 1.1, h - 0.55)])
+            if arm:
+                pygame.draw.polygon(surf, wood, arm[0])
+            ends = ((-0.95, h - 0.55), (0.95, h - 0.55))
+        else:
+            steel = self.col((160, 164, 172), 3, fog)
+            for sa, sb in ((-1, -1), (1, -1), (1, 1), (-1, 1)):          # four legs leaning in
+                a = self.project(x + sa * 3.0, y + sb * 3.0, 0.0)
+                b = self.project(x + sa * 0.7, y + sb * 0.7, h)
+                if a and b:
+                    pygame.draw.line(surf, steel, a[:2], b[:2], 2 if dist < 60 else 1)
+            for z, half in ((h * 0.35, 2.2), (h * 0.7, 1.4), (h - 2.0, 6.0), (h - 6.0, 5.0)):   # braces and arms
+                a = self.project(x - ax * half, y - ay * half, z)
+                b = self.project(x + ax * half, y + ay * half, z)
+                if a and b:
+                    pygame.draw.line(surf, steel, a[:2], b[:2], 1)
+            ends = ((-5.5, h - 2.0), (5.5, h - 2.0), (-4.5, h - 6.0), (4.5, h - 6.0))
+        if not to or dist > WIRE_DIST:
+            return
+        dz = self._g(to[0], to[1]) - self._g(x, y)                      # the next pole stands on its own ground
+        wire = self.col((40, 40, 46), 3, fog)
+        for off, z in ends:
+            ox, oy = ax * off, ay * off
+            pts = [(x + ox, y + oy, z), ((x + to[0]) / 2 + ox, (y + to[1]) / 2 + oy, z + dz / 2 - 0.8),
+                   (to[0] + ox, to[1] + oy, z + dz)]                    # a little sag in the middle
+            proj = [self.project(*q) for q in pts]
+            for a, b in zip(proj, proj[1:]):
+                if a and b:
+                    pygame.draw.line(surf, wire, a[:2], b[:2])
+
     def _draw_fence(self, surf, p, fog, ink):
         """One piece of a white rail fence: a post at its start (and end, for the last piece) and two rails."""
         (ax, ay), (bx, by) = p["a"], p["b"]
@@ -2279,6 +2369,9 @@ class Renderer3D:
             return
         c = self.col(tuple(p.get("colour") or (244, 244, 238)), 2, fog)
         h = p["h"]
+        if p.get("solid"):                                 # a wall or a hedge: one face
+            self._poly(surf, [(ax, ay, 0.0), (bx, by, 0.0), (bx, by, h), (ax, ay, h)], c, ink)
+            return
         for z in (h * 0.45, h * 0.85):                     # rails: one flat face each
             self._poly(surf, [(ax, ay, z - 0.07), (bx, by, z - 0.07), (bx, by, z + 0.07), (ax, ay, z + 0.07)], c, ink)
         for px, py in (((ax, ay), (bx, by)) if p.get("last") else ((ax, ay),)):

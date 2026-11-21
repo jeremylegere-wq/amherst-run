@@ -272,3 +272,59 @@ class ParkingLots(unittest.TestCase):
         self.assertTrue(world.on_road(2030, 2020))
         self.assertFalse(world.on_road(2100, 2100))
         self.assertGreater(len(parking.stall_lines(data["lots"][0])), 20)
+
+
+class OsmExtras(unittest.TestCase):
+    DOC = {"areas": [{"kind": "cemetery", "points": [[0, 0], [40, 0], [40, 30], [0, 30]]},
+                     {"kind": "farmland", "points": [[5000, 5000], [5100, 5000], [5100, 5100]]}],
+           "waterways": [{"kind": "river", "width": 9.0, "points": [[-100, 50], [100, 50], [9000, 50]]}],
+           "power": [{"kind": "minor_line", "poles": [[0, -20, 0], [40, -20, 0], [80, -20, 0]]}],
+           "lone_poles": [[9000, 9000, 1]],
+           "fences": [{"kind": "hedge", "points": [[0, 40], [20, 40]]}]}
+
+    def data(self):
+        return {"meta": {"bounds": [-500, -500, 500, 500]}, "props": []}
+
+    def test_apply_clips_to_the_map_and_links_poles(self):
+        from game import extras
+        data = self.data()
+        line = extras.apply(data, self.DOC)
+        self.assertEqual([a["kind"] for a in data["areas"]], ["cemetery"])            # the far field is dropped
+        self.assertEqual(data["waterways"][0]["points"], [[-100, 50], [100, 50]])      # the river is clipped
+        poles = [p for p in data["props"] if p["kind"] == "pole"]
+        self.assertEqual(len(poles), 3)
+        self.assertEqual(poles[0]["to"], [40, -20])                                   # wired to the next pole
+        self.assertNotIn("to", poles[-1])
+        self.assertFalse([p for p in data["props"] if p["kind"] == "tower"])           # the lone tower is off the map
+        hedge = [p for p in data["props"] if p["kind"] == "fence"]
+        self.assertTrue(hedge and hedge[0]["solid"])
+        self.assertTrue(any(p["kind"] == "gravestone" for p in data["props"]))
+        self.assertIn("3 power poles", line)
+
+    def test_mapped_scenery_does_not_crowd_out_street_trees(self):
+        from game import props as PR
+        world = World(make_sample_map.build())
+        plain = PR.build_props(world, [], seed=1)
+        many = [{"kind": "gravestone", "x": float(i), "y": 9000.0} for i in range(3000)]
+        more = PR.build_props(world, many, seed=1)
+        self.assertEqual(sum(p["kind"] == "tree" for p in more), sum(p["kind"] == "tree" for p in plain))
+
+    def test_poles_towers_and_water_draw(self):
+        from game import extras
+        pygame.init()
+        data = make_sample_map.build()
+        data["roads"] = [{"type": "side", "width": 8, "name": "Elm St", "points": [[-200, 0], [200, 0]]}]
+        data["meta"]["bounds"] = [-500, -500, 500, 500]
+        extras.apply(data, {"power": [{"kind": "line", "poles": [[0, 15, 1], [60, 15, 1]]},
+                                      {"kind": "minor_line", "poles": [[-20, 8, 0], [10, 8, 0]]}],
+                            "waterways": [{"kind": "river", "width": 9.0, "points": [[-100, 30], [100, 30]]}]})
+        world = World(data)
+        r = R.Renderer3D(world, style="street")
+        car = Car(-30.0, 2.0, 0.2)
+        cam = R.ChaseCamera(car, world)
+        for _ in range(40):
+            cam.update(car, 1 / 30)
+        surf = pygame.Surface((C.INTERNAL_W, C.INTERNAL_H))
+        r.render(surf, car, cam)
+        got = {tuple(surf.get_at((x, y)))[:3] for x in range(0, surf.get_width()) for y in range(0, surf.get_height())}
+        self.assertIn(r.col((40, 40, 46), 3, 0), got)                                # wires

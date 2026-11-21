@@ -163,9 +163,11 @@ class World:
         self.water = data.get("water", [])
         self.parks = data.get("parks", [])
         self.lots = data.get("lots", [])                       # open parking lots (game/parking.py)
+        self.areas = data.get("areas", [])                     # land use colours (game/extras.py)
+        self.waterways = data.get("waterways", [])             # rivers, streams and ditches as lines
         landmarks = data.get("landmarks", [])
         self.horizon = [l for l in landmarks if l["kind"] == "turbine"]   # drawn on the skyline
-        for group in (self.roads, self.buildings, self.rails, self.water, self.parks, self.lots):
+        for group in (self.roads, self.buildings, self.rails, self.water, self.parks, self.lots, self.areas, self.waterways):
             for item in group:
                 item["bbox"] = _bbox(item["points"])
         self.bounds = tuple(self.meta["bounds"])
@@ -246,6 +248,10 @@ class World:
             print(line)
         from . import parking                         # open parking lots; after the edits (they key on whole roads)
         line = parking.apply(data, parking.load_beside(path))
+        if line:
+            print(line)
+        from . import extras                          # land use, waterways, power lines, fences (OSM extras)
+        line = extras.apply(data, extras.load_beside(path))
         if line:
             print(line)
         if zoning:                                    # zone looks first, so custom buildings and landmarks win
