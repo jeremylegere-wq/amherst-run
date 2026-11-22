@@ -13,6 +13,11 @@ up to your screen.
 It runs on a desktop (Windows, macOS, Linux), on **Batocera** with an Xbox-style controller, and on **Android**
 with on-screen touch controls.
 
+**Native version:** [amherst-run-native](https://github.com/jeremylegere-wq/amherst-run-native) is the C++ port
+(SDL2 + OpenGL ES) for an Xbox One in Developer Mode, Android and Linux, with tagging, music and a bolder street look
+of its own. It loads this repository's baked map from each release. Its Xbox and Android builds are untested on real
+hardware so far.
+
 ### What is real
 - **Streets** from the Nova Scotia Road Network: real names, one-ways, overpasses on Highway 104, speed limits.
 - **Buildings, parks and landmarks** from OpenStreetMap: the red sandstone downtown, the Court House, Victoria Square

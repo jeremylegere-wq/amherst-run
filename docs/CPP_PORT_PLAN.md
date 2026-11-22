@@ -1,7 +1,8 @@
 # C++ port plan (homebrew: Xbox One Developer Mode, Android, Batocera, desktop)
 
-Status: proposal, 22 Nov 2026. Nothing here is built yet. The Python game (v1.0.0) stays the reference and keeps
-shipping while the port grows.
+Status (23 Nov 2026): built in [amherst-run-native](https://github.com/jeremylegere-wq/amherst-run-native), phases 1-5
+done on Linux; CI builds the Xbox package and the Android APK, both untested on real hardware. (First written as a
+proposal on 22 Nov 2026.) The Python game stays the reference and keeps shipping while the port grows.
 
 ## Goal and limits
 
@@ -125,7 +126,8 @@ Each phase ends with something you can run, and a commit; benchmark before and a
 ## Dependencies (need approval)
 
 - SDL2 2.30.x (zlib licence), vendored or as a CMake subproject.
-- ANGLE only comes with SDL2's UWP setup; nothing extra to add by hand on the other platforms.
+- ANGLE for the Xbox build: Microsoft's prebuilt ANGLE.WindowsStore package (BSD), approved separately. (This said
+  ANGLE came with SDL2: it does not.) Nothing extra on the other platforms.
 - No other libraries planned.
 
 ## Risks and open questions
