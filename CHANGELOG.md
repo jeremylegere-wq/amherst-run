@@ -9,6 +9,10 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+### Added
+- The baked map carries the paint on walls (`DECO`): the original graffiti tags, made with the same seeds as the
+  street style, and the two downtown murals, as triangles ready to draw.
+
 ## [1.0.4] - 2026-11-22
 
 ### Added

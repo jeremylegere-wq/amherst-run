@@ -131,6 +131,25 @@ class Bake(unittest.TestCase):
         self.assertEqual(ch["PARK"][20:23], b"crv")
         self.assertEqual(tuple(ch["PARK"][23:29]), (70, 74, 82, 70, 74, 82))   # the roof takes the body colour
 
+    def test_murals_are_painted_on_the_wall_they_face(self):
+        w = self.world()
+        w.buildings[0]["mural"] = {"design": "highlanders", "facing": 180.0}    # the wall along y = 62 faces south
+        ch = B.read_chunks(B.bake(w, source="test")[0])
+        (n,) = struct.unpack_from("<I", ch["DECO"])
+        from game import murals
+        self.assertGreaterEqual(n, len(murals.DESIGNS["highlanders"]))
+        off, outs = 4, []
+        for _ in range(n):
+            bi, nx, ny, r, g, b, nt = struct.unpack_from("<I2f3BI", ch["DECO"], off)
+            off += struct.calcsize("<I2f3BI")
+            ys = [struct.unpack_from("<3f", ch["DECO"], off + 12 * k)[1] for k in range(3 * nt)]
+            off += 36 * nt
+            self.assertEqual((bi, round(nx, 3), round(ny, 3)), (0, 0.0, 1.0))
+            outs.append(min(ys))
+        self.assertEqual(off, len(ch["DECO"]))
+        self.assertTrue(all(62.0 < y < 62.3 for y in outs))      # just in front of the wall
+        self.assertLess(outs[0], outs[-1])                       # later shapes stand in front of earlier ones
+
     def test_unknown_file_is_refused(self):
         with self.assertRaises(ValueError):
             B.read_chunks(b"NOPE" + bytes(8))

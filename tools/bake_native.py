@@ -62,6 +62,11 @@ File format (little-endian; the C++ loader is src/world/map_file.cpp in the nati
     PARK  hand-placed parked cars (data/map_edits.json "cars"; game/render3d.py parked_cars): u32 n, per car:
           f32 x y heading (map radians), str model (game/car.py MODELS; "sedan" if unknown), u8 body rgb[3],
           u8 roof rgb[3]. Their collision circles are already in PROP (car_block)
+    DECO  paint on walls, as the street style draws it: the original procedural graffiti tags (render3d.py
+          _prep_graffiti / _make_tag, the same seeds) and the murals (game/murals.py, map_edits.json "mural"):
+          u32 n, per painted shape: u32 building (BLDG index), f32 nx ny (the wall's outward normal), u8 rgb[3],
+          u32 triangles, triangles x 3 x f32 (x y z); z is above the building's highest corner, and each shape
+          already stands a little in front of the one painted before it
     ADDR  real civic addresses (data/addresses.json, NS Civic Address File, OGL-NS): u32 n, per address: f32 x y,
           str number, u32 street (index into NAME)
 
@@ -209,6 +214,91 @@ def _details(world, i, b, pts):
     return out + b"".join(struct.pack("<H", k) for k in shops)
 
 
+def _decorations(world, baked_index):
+    """DECO entries: every graffiti tag and mural shape as world-space triangles (see the format above)."""
+    import random
+    from game import archetypes, murals
+    from game.render3d import Renderer3D, default_height, graffiti_ok
+    out = []
+
+    def shape(bi, nx, ny, rgb, pts3):
+        flat = [(p[0] * -ny + p[1] * nx, p[2]) for p in pts3]   # along the wall, up: for cutting into triangles
+        tris = triangulate(flat)
+        if not tris:
+            return
+        out.append(struct.pack("<I2f3BI", bi, nx, ny, *[int(c) for c in rgb], len(tris))
+                   + b"".join(struct.pack("<3f", *pts3[k]) for t in tris for k in t))
+
+    for i, b in enumerate(world.buildings):
+        if i not in baked_index:
+            continue
+        pts = [tuple(p) for p in b["points"]]                   # walls exactly as Renderer3D._prep_building makes them
+        n = len(pts)
+        area = sum(pts[j][0] * pts[(j + 1) % n][1] - pts[(j + 1) % n][0] * pts[j][1] for j in range(n)) / 2
+        if abs(area) < 1.0:
+            continue
+        walls = []
+        for j in range(n):
+            x0, y0 = pts[j]
+            x1, y1 = pts[(j + 1) % n]
+            L = math.hypot(x1 - x0, y1 - y0)
+            if L < 0.05:
+                continue
+            nx, ny = ((y1 - y0) / L, -(x1 - x0) / L) if area > 0 else (-(y1 - y0) / L, (x1 - x0) / L)
+            walls.append((x0, y0, x1, y1, nx, ny))
+        h = b.get("height") or default_height(b, i, abs(area))
+        bi = baked_index[i]
+        house = archetypes.classify(b, i)
+        if h >= 3.0 and graffiti_ok(b, abs(area)) and not (house and house["kind"] != "apartment"):
+            for wi, (x0, y0, x1, y1, nx, ny) in enumerate(walls):  # _prep_graffiti: about 30% of the longer walls
+                L = math.hypot(x1 - x0, y1 - y0)
+                if L < 5.0:
+                    continue
+                rng = random.Random(i * 7919 + wi * 104729 + 17)
+                if rng.random() > 0.3:
+                    continue
+                ux, uy = (x1 - x0) / L, (y1 - y0) / L
+                for k, (colour, uv) in enumerate(Renderer3D._make_tag(rng, L, h)):
+                    out_by = 0.05 + 0.006 * k
+                    shape(bi, nx, ny, colour, [(x0 + nx * out_by + ux * u, y0 + ny * out_by + uy * u, max(0.05, v))
+                                               for u, v in uv])
+        m = b.get("mural")
+        if m and m.get("design") in murals.DESIGNS:             # _draw_mural: on the wall facing its bearing
+            fb = math.radians(m.get("facing", 0.0))
+            fx, fy = math.sin(fb), -math.cos(fb)
+            x0, y0, x1, y1, nx, ny = max(walls, key=lambda w: w[4] * fx + w[5] * fy)
+            mx, my = (x0 + x1) / 2, (y0 + y1) / 2
+            WL = math.hypot(x1 - x0, y1 - y0)
+            width = min(m.get("width", WL - 1.0), WL - 0.6)
+            z0, z1 = m.get("bottom", 1.0), min(m.get("top", h - 0.6), h - 0.2)
+            ux, uy = ny, -nx                                     # left to right, seen from outside
+            span = z1 - z0
+            for k, sh in enumerate(murals.DESIGNS[m["design"]]):
+                out_by = 0.04 + 0.006 * k
+
+                def P(u, v):
+                    return (mx + ux * (u - 0.5) * width + nx * out_by, my + uy * (u - 0.5) * width + ny * out_by,
+                            z0 + v * span)
+                if sh[0] == "rect":
+                    _k, a0, b0, a1, b1, rgb = sh
+                    shape(bi, nx, ny, rgb, [P(a0, b0), P(a1, b0), P(a1, b1), P(a0, b1)])
+                elif sh[0] == "poly":
+                    shape(bi, nx, ny, sh[2], [P(a, c) for a, c in sh[1]])
+                elif sh[0] == "disc":
+                    _k, cu, cv, r, rgb = sh
+                    ru = r * span / width                            # keep it round on the wall
+                    shape(bi, nx, ny, rgb, [P(cu + ru * math.cos(q * math.pi / 5), cv + r * math.sin(q * math.pi / 5))
+                                            for q in range(10)])
+                elif sh[0] == "letters":
+                    _k, a0, b0, a1, b1, rgb, nl = sh
+                    step = (a1 - a0) / nl
+                    for q in range(nl):
+                        top = b1 if q % 3 else b1 + (b1 - b0) * 0.3   # the odd capital stands taller
+                        shape(bi, nx, ny, rgb, [P(a0 + q * step, b0), P(a0 + (q + 0.65) * step, b0),
+                                                P(a0 + (q + 0.65) * step, top), P(a0 + q * step, top)])
+    return out
+
+
 def triangulate(points):
     """Ear clipping. Returns [(i, j, k)] counter-clockwise triangles indexing `points` ([] if it cannot)."""
     n = len(points)
@@ -305,7 +395,7 @@ def bake(world, source=""):
     mats = st.get("materials", {})
     slate = st.get("slate", (96, 100, 112))
     cols = st["buildings"]
-    body, details, count, dropped = [], [], 0, 0
+    body, details, count, dropped, baked_index = [], [], 0, 0, {}
     for i, b in enumerate(world.buildings):
         if b.get("removed"):
             continue
@@ -322,9 +412,12 @@ def bake(world, source=""):
         body.append(struct.pack("<2f2B3B3BB", float(height), float(b.get("roof_height") or 0.0),
                                 ROOFS.get(b.get("roof"), 0), flags, *wall, *roof, 0) + _poly_payload(pts, tris))
         details.append(_details(world, i, b, pts))
+        baked_index[i] = count
         count += 1
     chunks.append(_chunk("BLDG", struct.pack("<I", count) + b"".join(body)))
     chunks.append(_chunk("BDET", struct.pack("<I", count) + b"".join(details)))
+    deco = _decorations(world, baked_index)
+    chunks.append(_chunk("DECO", struct.pack("<I", len(deco)) + b"".join(deco)))
     from game.car import MODELS
     parked = getattr(world, "parked", ())
     body = [struct.pack("<I", len(parked))]
