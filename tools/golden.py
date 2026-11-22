@@ -13,9 +13,11 @@ drive.csv     run, step, throttle, brake, steer, handbrake, bumper, x, y, z, hea
 paths.csv     src, dst, path (node ids, space separated; "none")   A* routes on the road graph between node pairs
 nearest.csv   x, y, max_r, heading ("none"), node ("none")         nearest_node lookups, with and without a heading
 traffic.csv   run, step, car, pace, x, y, heading, vx, vy, steer, throttle, brake, edge
-              civilian drivers (game/ai.py drive_traffic at 20 Hz, game/town.py's physics step at 60 Hz, no
-              junction rules) on fixed starts. At each junction the driver takes the most likely turn (the largest
-              of choose_next's weights, the first on a tie) instead of a random one, so the run repeats exactly.
+              civilian drivers (game/ai.py drive_traffic at 20 Hz with game/junctions.py's rules on the town clock,
+              game/town.py's physics step at 60 Hz) on fixed starts, and cars converging on a junction with lights,
+              one with stop signs and an all-way one, from every approach. At each junction the driver takes the
+              most likely turn (the largest of choose_next's weights, the first on a tie) instead of a random one,
+              so the run repeats exactly.
 
 Fixed seed, so the files only change when the map or the game's rules change.
 """
@@ -174,24 +176,45 @@ TRAFFIC = [
     ("downtown_loop", 40.0, [(394.6, -835.8, 0.0, 0.0, 1.0)]),
     ("follow_a_slow_car", 30.0, [(-1655.0, -2000.0, 1.5708, 0.0, 1.0), (-1655.0, -2000.0, 1.5708, 25.0, 0.55)]),
     ("side_streets", 40.0, [(1574.0, -1230.0, 3.1416, 0.0, 0.95)]),
+    ("signal_crossing", 35.0, ("junction", 738.0, 39.0)),     # OSM traffic lights
+    ("stop_crossing", 30.0, ("junction", 1876.0, -104.0)),    # OSM stop sign
+    ("allway_crossing", 30.0, ("junction", 353.0, 120.0)),    # a plain 4-way of equal streets
 ]
 CONTROL_DT = 0.05
+
+
+def _junction_starts(graph, x, y):
+    """(edge id, distance along it) for one car on every road into the junction node nearest (x, y), 40 m back."""
+    n = graph.nearest_node(x, y, 20.0)
+    out = []
+    for eid, e in enumerate(graph.edges):
+        if e.b == n:
+            out.append((eid, max(0.0, e.length - 40.0)))
+    return out
 
 
 def traffic_runs(world, graph):
     from game.ai import AICar, PAL_TRAFFIC, drive_traffic
     from game.collision import collide_cars, move_and_slide, settle_height
+    from game.junctions import Junctions
     choose = best_next(graph)
     graph.choose_next = choose
+    junctions = Junctions(graph, getattr(world, "marks", ()))
     rows = []
     for name, secs, starts in TRAFFIC:
         cars = []
-        for x, y, h, ahead, pace in starts:
-            eid, s = start_edge(graph, x, y, h)
-            s += ahead
-            while s > graph.edges[eid].length - 0.5:
-                s -= graph.edges[eid].length
-                eid = choose(eid)
+        if starts[0] == "junction":
+            places = [(eid, s, 1.0) for eid, s in _junction_starts(graph, starts[1], starts[2])]
+        else:
+            places = []
+            for x, y, h, ahead, pace in starts:
+                eid, s = start_edge(graph, x, y, h)
+                s += ahead
+                while s > graph.edges[eid].length - 0.5:
+                    s -= graph.edges[eid].length
+                    eid = choose(eid)
+                places.append((eid, s, pace))
+        for eid, s, pace in places:
             cx, cy, ch = graph.lane_point(eid, s)
             c = AICar("traffic", PAL_TRAFFIC[0], cx, cy, ch)
             c.z = world.height_at(cx, cy, 0.0)
@@ -199,16 +222,17 @@ def traffic_runs(world, graph):
             v = graph.edges[eid].cruise * pace
             c.vx, c.vy = math.cos(ch) * v, math.sin(ch) * v
             cars.append(c)
-        acc = 0.0
+        acc, now = 0.0, 0.0
         for k, c in enumerate(cars):
             rows.append((name, 0, k, c.pace, c.x, c.y, c.heading, c.vx, c.vy, c.steer, int(c.throttle), int(c.brake),
                          c.edge))
         for step in range(1, int(round(secs / DT)) + 1):    # game/town.py Town.update, for these cars only
+            now += DT
             acc += DT
             if acc >= CONTROL_DT:
                 ctl, acc = acc, 0.0
                 for c in cars:
-                    drive_traffic(c, graph, cars, None, ctl, None, 0.0)
+                    drive_traffic(c, graph, cars, None, ctl, junctions, now)
             for c in cars:
                 px, py = c.x, c.y
                 c.update(DT, c.throttle, c.brake, c.steer, False, True)

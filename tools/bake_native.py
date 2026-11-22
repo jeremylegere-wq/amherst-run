@@ -34,6 +34,10 @@ File format (little-endian; the C++ loader is src/world/map_file.cpp in the nati
           builds it): u32 nodes, nodes x f64 (x y), u32 edges, per edge: u32 a b, u8 type (0 lane 1 side 2 main),
           u8 pad[3], f32 width, f32 speed km/h (posted), u32 name. Edge order is the game's; a node's outgoing edges
           are the edges starting at it, in that order.
+    JNCT  the junction rules (game/junctions.py Junctions, classified as the game does, with the map's OSM signals and
+          stop signs): u32 nodes, per node u8 is-junction, f64 box radius, f64 stopping distance from the node;
+          u32 edges, per edge u8 control of the junction it drives into (0 priority 1 signal 2 stop 3 yield
+          4 all-way), u8 signal phase (0 east-west, 1 north-south)
 
 Version 1. Bump VERSION whenever the layout changes; the C++ loader refuses versions it does not know.
 """
@@ -224,6 +228,15 @@ def bake(world, source=""):
         body.append(struct.pack("<2I4B2fI", e.a, e.b, TYPES.get(e.rtype, 1), 0, 0, 0, float(e.width), float(e.kmh),
                                 name_ix[e.name]))
     chunks.append(_chunk("GRPH", b"".join(body)))
+    from game.junctions import Junctions
+    jn = Junctions(graph, getattr(world, "marks", ()))
+    ctl = {None: 0, "signal": 1, "stop": 2, "yield": 3, "allway": 4}
+    body = [struct.pack("<I", len(graph.nodes))]
+    for n in range(len(graph.nodes)):
+        body.append(struct.pack("<B2d", 1 if jn.is_junction[n] else 0, jn.box.get(n, 0.0), jn.stop_at.get(n, 0.0)))
+    body.append(struct.pack("<I", len(graph.edges)))
+    body.append(b"".join(struct.pack("<2B", ctl[jn.control.get(e)], jn.phase.get(e, 0)) for e in range(len(graph.edges))))
+    chunks.append(_chunk("JNCT", b"".join(body)))
     chunks[1] = _chunk("NAME", struct.pack("<I", len(names)) + b"".join(_str(n) for n in names))
     data = b"AMR1" + struct.pack("<II", VERSION, len(chunks)) + b"".join(chunks)
     return data, {"roads": len(world.roads), "spans": len(world.spans), "buildings": count, "dropped": dropped,

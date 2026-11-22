@@ -214,6 +214,20 @@ class BehaviourTests(unittest.TestCase):
         self.assertLess(jn.limit(c, east, s, [c, parked], 0.0, 0.05), 3.0)
         self.assertFalse(c.jn_hold, "a blocked exit is a jam, not a wait at a sign")
 
+    def test_a_car_waiting_at_its_own_line_does_not_block_the_exit(self):
+        """Two cars waiting at an all-way stop used to count each other as blocking their way out (the one on the
+        far side of the junction stands on our exit road, facing us) and waited for each other forever."""
+        g = crossroads("side", "side")
+        jn = J.Junctions(g)
+        n = node_at(g, 0, 0)
+        east = incoming(g, jn, n, 1, 0)
+        c = traffic_on(g, east, g.edges[east].length - jn.stop_at[n] - 1.0, 0.5)
+        c.nxt = next(e for e in g.out[n] if g.edges[e].dx > 0.9)
+        waiting = AICar("traffic", PAL_TRAFFIC[1], jn.stop_at[n], -2.0, math.pi)   # across the junction, facing us
+        self.assertFalse(jn._exit_blocked(c, n, east, [c, waiting]))
+        parked = AICar("traffic", PAL_TRAFFIC[1], jn.box[n] + 4.0, 2.0, 0.0)       # facing out, in our lane
+        self.assertTrue(jn._exit_blocked(c, n, east, [c, parked]))
+
 
 if __name__ == "__main__":
     unittest.main()

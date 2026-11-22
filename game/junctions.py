@@ -227,6 +227,9 @@ class Junctions:
         for o in others:
             if o is car or o.speed > 3.0:
                 continue
+            if math.cos(o.heading) * x.dx + math.sin(o.heading) * x.dy < 0.3:
+                continue                               # facing into the junction: waiting at its own line, not in
+                                                       # our way out (two such cars used to wait for each other forever)
             dx, dy = o.x - nx, o.y - ny
             along = dx * x.dx + dy * x.dy
             if 0.0 < along < reach and abs(-dx * x.dy + dy * x.dx) < 3.5:

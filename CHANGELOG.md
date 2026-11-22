@@ -13,6 +13,14 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 - The baked map carries the road graph the traffic drives on (`GRPH`: nodes and directed edges exactly as
   `game/roadgraph.py` builds them), and `tools/golden.py` records A* routes, nearest-node lookups and three
   civilian-driver runs (`paths.csv`, `nearest.csv`, `traffic.csv`) for the native game's parity tests.
+- The baked map carries the junction rules (`JNCT`: lights, stop signs, give-way and all-way junctions, classified
+  as the game does), and the golden traffic runs drive under them, with cars converging on a junction with lights,
+  one with a stop sign and an all-way one.
+
+### Fixed
+- Traffic at an all-way junction could wait forever: two cars at their stop lines each counted the other, standing
+  across the junction on its exit road, as blocking the way out. A stopped car facing into the junction no longer
+  counts (`game/junctions.py` `_exit_blocked`); before, such cars were removed after 20 s as jammed.
 
 ## [1.0.2] - 2026-11-22
 A fuller map for the native C++ game: every tree and post, and golden drives for its car physics. The Python game
