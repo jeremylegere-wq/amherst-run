@@ -13,6 +13,10 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 - `tools/golden.py` also records five scripted drives of player 1's car (`drive.csv`: into a house, up an overpass,
   a handbrake turn, a power slide, a hill) for the native game's physics parity test.
 
+### Fixed
+- The baked map now carries the wall colour and height the Python renderer actually uses (per-building material
+  colours and default heights), so the native game's buildings match.
+
 ## [1.0.1] - 2026-11-22
 The map for the native C++ game, and the plan for it. The game itself is unchanged.
 

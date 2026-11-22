@@ -163,10 +163,12 @@ def bake(world, source=""):
                                 len(sp["points"])))
         body.append(b"".join(struct.pack("<3f", p[0], p[1], h) for p, h in zip(sp["points"], sp["h"])))
     chunks.append(_chunk("SPAN", b"".join(body)))
+    from game.render3d import default_height
     mats = st.get("materials", {})
     slate = st.get("slate", (96, 100, 112))
+    cols = st["buildings"]
     body, count, dropped = [], 0, 0
-    for b in world.buildings:
+    for i, b in enumerate(world.buildings):
         if b.get("removed"):
             continue
         pts = _clean(b["points"])
@@ -174,11 +176,12 @@ def bake(world, source=""):
         if not tris or len(pts) > 65535:
             dropped += 1
             continue
-        mat = mats.get(b.get("material")) or [(176, 84, 68)]
-        wall = _rgb(b.get("colour"), mat[0])
+        mat = mats.get(b.get("material"))                 # the colour the Python renderer picks (_prep_building)
+        wall = _rgb(b.get("colour"), mat[i % len(mat)] if mat else cols[(i * 31) % len(cols)])
+        height = b.get("height") or default_height(b, i, abs(_area2(pts)) / 2)
         roof = _rgb(b.get("roof_colour"), slate)
         flags = (1 if b.get("ridge_across") else 0) | (2 if b.get("landmark") else 0)
-        body.append(struct.pack("<2f2B3B3BB", float(b.get("height") or 6.0), float(b.get("roof_height") or 0.0),
+        body.append(struct.pack("<2f2B3B3BB", float(height), float(b.get("roof_height") or 0.0),
                                 ROOFS.get(b.get("roof"), 0), flags, *wall, *roof, 0) + _poly_payload(pts, tris))
         count += 1
     chunks.append(_chunk("BLDG", struct.pack("<I", count) + b"".join(body)))
