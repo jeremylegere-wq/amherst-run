@@ -10,6 +10,9 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 ## [Unreleased]
 
 ### Added
+- The baked map carries each building's details as the street style draws them (`BDET`: house type, the wall that
+  faces the street, door, porch, shop-front walls, chimney, dormers, steeple, clock tower) and the hand-placed parked
+  cars (`PARK`), for the native game's look.
 - `tools/golden.py` records police chases (`police.csv`: boxing in a parked player, two police chasing a driving
   one, standing down) for the native game's parity tests.
 - The baked map carries the job hubs, the Heritage Tour's landmark spots and the 5,610 real civic addresses
