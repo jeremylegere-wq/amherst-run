@@ -8,17 +8,12 @@ Cruise the real street network, take jobs from the town's landmarks and keep ahe
 Driving only, no on-foot gameplay. Pure Python + pygame, drawn as chunky 320x180 (16:9) cel-shaded polygons and scaled
 up to your screen.
 
-> **Native C++ version:** [amherst-run-native](https://github.com/jeremylegere-wq/amherst-run-native) is a rebuild of this game in C++ (SDL2, OpenGL ES 3) for Xbox in Developer Mode, Android and Linux. This Python game remains the reference it is tested against.
+> **Native C++ version:** [amherst-run-native](https://github.com/jeremylegere-wq/amherst-run-native) is a rebuild of this game in C++ (SDL2, OpenGL ES 3) for Xbox in Developer Mode, Android and Linux. This Python game remains the reference it is tested against. Its Xbox and Android builds are untested on real hardware so far.
 
 ![Victoria Street, downtown Amherst](docs/images/downtown.png)
 
 It runs on a desktop (Windows, macOS, Linux), on **Batocera** with an Xbox-style controller, and on **Android**
 with on-screen touch controls.
-
-**Native version:** [amherst-run-native](https://github.com/jeremylegere-wq/amherst-run-native) is the C++ port
-(SDL2 + OpenGL ES) for an Xbox One in Developer Mode, Android and Linux, with tagging, music and a bolder street look
-of its own. It loads this repository's baked map from each release. Its Xbox and Android builds are untested on real
-hardware so far.
 
 ### What is real
 - **Streets** from the Nova Scotia Road Network: real names, one-ways, overpasses on Highway 104, speed limits.
