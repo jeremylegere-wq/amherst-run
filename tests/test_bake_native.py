@@ -107,6 +107,21 @@ class Bake(unittest.TestCase):
         self.assertEqual(nkinds, 0)                            # this little world has no props
         self.assertEqual(B.bake(self.world(), source="test")[0], data)   # the same map bakes to the same bytes
 
+    def test_house_details_face_the_street(self):
+        w = self.world()
+        w.buildings.append({"points": [[20, 12], [30, 12], [30, 20], [20, 20]], "height": 6.8, "roof": "gable",
+                            "roof_height": 2.5, "tags": {"building": "house"}, "chimney": 0.5})
+        ch = B.read_chunks(B.bake(w, source="test")[0])
+        (n,) = struct.unpack_from("<I", ch["BDET"])
+        self.assertEqual(n, 2)                                # one entry per BLDG building, in the same order
+        size = struct.calcsize("<6B2hf12B3fb2B")
+        kind, storeys, flags, steeple, lm, dormers, front, wrap, door = struct.unpack_from("<6B2hf", ch["BDET"], 4 + size)
+        self.assertEqual((kind, storeys, lm), (5, 2, 0))      # a two-storey house, not a landmark
+        self.assertEqual(front, 0)                            # wall 0 runs along y = 12, facing Main St (y = 0)
+        self.assertTrue(0.3 <= door <= 0.7)
+        (chimney,) = struct.unpack_from("<f", ch["BDET"], 4 + size + struct.calcsize("<6B2hf12B2f"))
+        self.assertEqual(chimney, 0.5)
+
     def test_unknown_file_is_refused(self):
         with self.assertRaises(ValueError):
             B.read_chunks(b"NOPE" + bytes(8))

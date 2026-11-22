@@ -49,6 +49,16 @@ File format (little-endian; the C++ loader is src/world/map_file.cpp in the nati
     RAIL  the rail line: u32 ways, per way: u32 points, points x f32 (x y)     (drawn as rail beds)
     TRAN  the train's run (game/train.py Train: the ways stitched into one line, and the stretch either side of
           town it runs): u32 points, points x f64 (x y), f64 lo hi (metres along the line)
+    BDET  building details, one entry per BLDG building in the same order (game/archetypes.py and the street
+          style's _house / _shop_walls / extras in game/render3d.py, worked out here so the native game only builds
+          geometry): u8 house kind (0 none 1 garage 2 mini-home 3 bungalow 4 cape 5 two-storey), u8 storeys,
+          u8 flags (1 porch 2 sidelights 4 no front windows 8 shutters 16 plaque 32 clock tower 64 cornice
+          128 own door colour), u8 steeple (0 none 1 spire 2 turret 3 twin), u8 landmark (0 none 1 court house
+          2 civic 3 church 4 armoury 5 other), u8 dormers, i16 front wall, i16 wrap-around wall (indices into the
+          outline: wall k runs from point k to k+1; -1 none), f32 door place along the front wall (0..1),
+          u8 rgb[3] x 4 (door, shutters, plaque, plinth), f32 window height, f32 plinth height (0 none),
+          f32 chimney place along the ridge (-1..1; -9 none), i8 dormer side (+1/-1 of the ridge's left normal),
+          u8 shop storeys (0 from the height), u8 shop walls n, n x u16 (walls with a shop front)
     ADDR  real civic addresses (data/addresses.json, NS Civic Address File, OGL-NS): u32 n, per address: f32 x y,
           str number, u32 street (index into NAME)
 
@@ -95,6 +105,105 @@ def _clean(points):
 
 def _area2(pts):
     return sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(pts, pts[1:] + pts[:1]))
+
+
+HOUSE_KINDS = {"garage": 1, "minihome": 2, "bungalow": 3, "cape": 4, "two_storey": 5}
+STEEPLES = {"none": 0, "spire": 1, "turret": 2, "twin": 3}
+LANDMARKS = {"courthouse": 1, "civic": 2, "church": 3, "armoury": 4}
+
+
+def _walls(pts):
+    """(x0, y0, x1, y1, nx, ny) per outline edge k (point k to k+1), normals pointing out (game/render3d.py)."""
+    area = _area2(pts)
+    out = []
+    for a, b in zip(pts, pts[1:] + pts[:1]):
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        L = math.hypot(dx, dy) or 1.0
+        nx, ny = (dy / L, -dx / L) if area > 0 else (-dy / L, dx / L)
+        out.append((a[0], a[1], b[0], b[1], nx, ny))
+    return out
+
+
+def _details(world, i, b, pts):
+    """The BDET entry of building i (outline pts as baked): what Renderer3D._house, _shop_walls and the building
+    extras work out for the street style, so the native game draws the same doors, windows, porches and fronts."""
+    from game import archetypes
+    from game.render3d import SHOP_ZONES
+    walls = _walls(pts)
+    kind, storeys, flags, front, wrap, door = 0, 1, 0, -1, -1, 0.5
+    door_rgb = shutters = plaque = plinth = (0, 0, 0)
+    info = archetypes.classify(b, i)
+    if info is not None and info["kind"] in HOUSE_KINDS:
+        kind, storeys = HOUSE_KINDS[info["kind"]], int(info["storeys"])
+        if b.get("front") is not None:                              # hand-set: compass bearing the front faces
+            fb = math.radians(b["front"])
+            fx, fy = math.sin(fb), -math.cos(fb)
+            f = max(range(len(walls)), key=lambda k: walls[k][4] * fx + walls[k][5] * fy)
+        else:
+            f = archetypes.front_wall(walls, world.on_road)
+        front = -1 if f is None else f
+        door = b["door_at"] if b.get("door_at") is not None else 0.3 + 0.4 * archetypes._coin(i, 3)
+        flags |= (1 if info["porch"] else 0) | (2 if b.get("sidelights") else 0)
+        flags |= 4 if b.get("front_windows") is False else 0
+        if b.get("door"):
+            flags |= 128
+            door_rgb = tuple(b["door"])
+        if b.get("shutters"):
+            flags |= 8
+            shutters = tuple(b["shutters"])
+        if b.get("plaque"):
+            flags |= 16
+            plaque = tuple(b["plaque"])
+        if info.get("wrap") and f is not None:                      # the veranda turns the corner (as _house)
+            n = len(walls)
+            nbrs = [(f - 1) % n, (f + 1) % n]
+            near = archetypes.front_wall([walls[k] for k in nbrs], world.on_road)
+            wrap = nbrs[near] if near is not None else max(
+                nbrs, key=lambda k: math.hypot(walls[k][2] - walls[k][0], walls[k][3] - walls[k][1]))
+    has_ex = bool(b.get("material") or b.get("landmark") or b.get("roof"))
+    landmark = b.get("landmark")
+    lm = LANDMARKS.get(landmark, 5) if landmark else 0
+    if has_ex and b.get("tower"):
+        flags |= 32
+    if b.get("material") in ("sandstone", "brick"):
+        flags |= 64
+    if b.get("plinth"):
+        plinth = tuple(b["plinth"])
+    shops = []
+    downtown = b.get("material") in ("sandstone", "brick") and (b.get("zone") in SHOP_ZONES or b.get("zone") is None)
+    if has_ex and (b.get("shopfront") or (b.get("shopfront") is None and downtown and not landmark)):
+        for k, w in enumerate(walls):
+            if math.hypot(w[2] - w[0], w[3] - w[1]) >= 3.0 and archetypes.front_wall([w], world.on_road, 9.0, 1.5) == 0:
+                shops.append(k)
+    chimney = -9.0
+    if b.get("chimney") is not None and b.get("roof") in ("gable", "hip") and len(pts) == 4:
+        chimney = float(b["chimney"])
+    dormers, side = int(b.get("dormers") or 0), 1
+    if dormers and len(pts) == 4:                                    # which roof slope faces the street (_dormer_frame)
+        cx, cy = sum(p[0] for p in pts) / 4, sum(p[1] for p in pts) / 4
+        e1 = (pts[1][0] - pts[0][0], pts[1][1] - pts[0][1])
+        e2 = (pts[2][0] - pts[1][0], pts[2][1] - pts[1][1])
+        l1, l2 = math.hypot(*e1), math.hypot(*e2)
+        e, hw = (e1, l2 / 2) if (l1 >= l2) != bool(b.get("ridge_across")) else (e2, l1 / 2)
+        L = math.hypot(*e) or 1.0
+        ux, uy = e[0] / L, e[1] / L
+        vx, vy = -uy, ux
+        if b.get("front") is not None:
+            fb = math.radians(b["front"])
+            side = 1 if vx * math.sin(fb) - vy * math.cos(fb) >= 0 else -1
+        else:
+            for s_ in (1, -1):
+                wx, wy = cx + s_ * vx * hw, cy + s_ * vy * hw
+                if archetypes.front_wall([(wx - ux, wy - uy, wx + ux, wy + uy, s_ * vx, s_ * vy)], world.on_road, 40.0) == 0:
+                    side = s_
+                    break
+    steeple = STEEPLES.get(b.get("steeple", "spire"), 1) if landmark == "church" else 0
+    out = struct.pack("<6B2hf", kind, storeys, flags, steeple, lm, min(255, dormers), front, wrap, float(door))
+    out += struct.pack("<12B", *door_rgb, *shutters, *plaque, *plinth)
+    out += struct.pack("<3f", float(b.get("window_h") or 1.3), float(b.get("plinth_h") or 1.6) if b.get("plinth") else 0.0,
+                       chimney)
+    out += struct.pack("<b2B", side, min(255, int(b.get("storeys") or 0)), len(shops))
+    return out + b"".join(struct.pack("<H", k) for k in shops)
 
 
 def triangulate(points):
@@ -193,7 +302,7 @@ def bake(world, source=""):
     mats = st.get("materials", {})
     slate = st.get("slate", (96, 100, 112))
     cols = st["buildings"]
-    body, count, dropped = [], 0, 0
+    body, details, count, dropped = [], [], 0, 0
     for i, b in enumerate(world.buildings):
         if b.get("removed"):
             continue
@@ -209,8 +318,10 @@ def bake(world, source=""):
         flags = (1 if b.get("ridge_across") else 0) | (2 if b.get("landmark") else 0)
         body.append(struct.pack("<2f2B3B3BB", float(height), float(b.get("roof_height") or 0.0),
                                 ROOFS.get(b.get("roof"), 0), flags, *wall, *roof, 0) + _poly_payload(pts, tris))
+        details.append(_details(world, i, b, pts))
         count += 1
     chunks.append(_chunk("BLDG", struct.pack("<I", count) + b"".join(body)))
+    chunks.append(_chunk("BDET", struct.pack("<I", count) + b"".join(details)))
     polys = []
     for kind, group, col in (("water", world.water, st["water"]), ("park", world.parks, st.get("park", st["grass"])),
                              ("lot", world.lots, st["road"]["side"]),
