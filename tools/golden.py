@@ -22,6 +22,9 @@ jobs.tsv      tab-separated: "address" x y text (MissionManager.address: the rea
               else a made-up one), "route" ax ay bx by metres (_route_len, which sizes delivery time limits), and
               "tour" hub label (targets as label@x@y joined by |) time-limit reward (_make_tour from each tour hub;
               only tours that need no random fill-in checkpoints)
+items.tsv     tab-separated: "box" x y (game/items.py box_sites downtown, as a balloon battle lays them out),
+              and "shot" run step x y result (step_shot of a puck and a seeker fired at fixed spots downtown, with a
+              rival car to home on and hit: positions every step, then "gone" / "hit" / "fly")
 police.csv    run, step, car (0 = the player, then police), x, y, heading, vx, vy
               police chases (game/ai.py drive_police at 20 Hz, game/town.py's physics step at 60 Hz) of a player
               who is parked, or driving a script. Police re-plan their route every 1.0 + 0.4 * random() s; here
@@ -299,6 +302,32 @@ def job_samples(world, graph, n=300, seed=13):
     return rows
 
 
+SHOTS = [  # (name, kind, x, y, heading, rival x, y): a puck into a wall (it bounces), a seeker after a rival
+    ("puck_off_the_walls", "puck", 395.0, -836.0, 0.3, None),
+    ("puck_down_the_street", "puck", 331.25, -761.25, 2.36, None),
+    ("seeker_after_a_rival", "seeker", 331.25, -761.25, 2.0, (300.0, -730.0)),
+]
+
+
+def item_samples(world, graph):
+    from game import items as I
+    from game.battle import ARENA, ARENA_RADIUS
+    from game.car import player_car
+    rows = [("box", "%.4f" % b.x, "%.4f" % b.y) for b in I.box_sites(graph, ARENA, ARENA_RADIUS)]
+    for name, kind, x, y, h, rival in SHOTS:
+        car = player_car(0, x, y, h)
+        shot = I.fire(kind, car, 0)
+        rivals = [(1, player_car(1, rival[0], rival[1], 0.0))] if rival else []
+        res = "fly"
+        for step in range(1, 601):
+            res = I.step_shot(shot, world, DT, rivals)
+            rows.append(("shot", name, str(step), "%.5f" % shot.x, "%.5f" % shot.y,
+                         res if isinstance(res, str) else "hit"))
+            if res != "fly":
+                break
+    return rows
+
+
 class _Half:
     """A stand-in for random.Random whose random() is always 0.5 (the police's re-planning interval)."""
     def random(self):
@@ -417,6 +446,12 @@ def main(argv=None):
             f.write("\t".join(r) + "\n")
     print("wrote jobs.tsv: %d addresses, %d routes, %d tours" % tuple(sum(1 for r in rows if r[0] == k)
                                                                      for k in ("address", "route", "tour")))
+    rows = item_samples(world, graph)
+    with open(os.path.join(args.out, "items.tsv"), "w") as f:
+        for r in rows:
+            f.write("\t".join(r) + "\n")
+    print("wrote items.tsv: %d boxes, %d shot steps" % (sum(1 for r in rows if r[0] == "box"),
+                                                       sum(1 for r in rows if r[0] == "shot")))
     rows = police_runs(world, graph)
     with open(os.path.join(args.out, "police.csv"), "w") as f:
         f.write("run,step,car,x,y,heading,vx,vy\n")

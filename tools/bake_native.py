@@ -41,6 +41,7 @@ File format (little-endian; the C++ loader is src/world/map_file.cpp in the nati
     HUBS  job hubs (game/missions.py MissionManager._find_hubs): u32 n, per hub: u8 role (0 deliveries 1 getaway
           2 tour 3 courthouse), f64 x y (at the kerb), str label
     TOUR  Heritage Tour spots (the landmarks _make_tour visits): u32 n, per spot: f64 x y (in the near lane), str label
+    SPRT  VS race finishes (game/battle.py sprint_targets): u32 n, per landmark: f64 x y, str label
     ADDR  real civic addresses (data/addresses.json, NS Civic Address File, OGL-NS): u32 n, per address: f32 x y,
           str number, u32 street (index into NAME)
 
@@ -248,6 +249,10 @@ def bake(world, source=""):
         struct.pack("<B2d", roles[h.role], h.x, h.y) + _str(h.label) for h in hubs)))
     chunks.append(_chunk("TOUR", struct.pack("<I", len(spots)) + b"".join(
         struct.pack("<2d", x, y) + _str(label) for label, x, y in spots)))
+    from game.battle import sprint_targets
+    targets = sprint_targets(world)
+    chunks.append(_chunk("SPRT", struct.pack("<I", len(targets)) + b"".join(
+        struct.pack("<2d", x, y) + _str(label) for label, x, y in targets)))
     addrs = []
     if getattr(world, "addresses", None) is not None:
         for cell in sorted(world.addresses.grid):

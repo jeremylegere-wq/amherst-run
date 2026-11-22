@@ -15,6 +15,8 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 - The baked map carries the job hubs, the Heritage Tour's landmark spots and the 5,610 real civic addresses
   (`HUBS`, `TOUR`, `ADDR`), and `tools/golden.py` records drop-point addresses, route lengths and the tours from each
   tour hub (`jobs.tsv`) for the native game's job tests.
+- The baked map carries the VS race finishes (`SPRT`), and `tools/golden.py` records the item box spots downtown
+  and the flight of a puck and a seeker (`items.tsv`) for the native game's battle tests.
 
 ## [1.0.3] - 2026-11-22
 Traffic no longer gets stuck at all-way junctions, and the native C++ game's map gains the road graph and junction
