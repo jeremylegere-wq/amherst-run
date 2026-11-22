@@ -25,6 +25,8 @@ jobs.tsv      tab-separated: "address" x y text (MissionManager.address: the rea
 items.tsv     tab-separated: "box" x y (game/items.py box_sites downtown, as a balloon battle lays them out),
               and "shot" run step x y result (step_shot of a puck and a seeker fired at fixed spots downtown, with a
               rival car to home on and hit: positions every step, then "gone" / "hit" / "fly")
+train.tsv     tab-separated: "unit" s dir cars index x y heading kind (game/train.py Train.units for fixed train
+              positions) and "push" s dir cars x y -> x y vx vy impact (Train.push_out of a car at that spot)
 police.csv    run, step, car (0 = the player, then police), x, y, heading, vx, vy
               police chases (game/ai.py drive_police at 20 Hz, game/town.py's physics step at 60 Hz) of a player
               who is parked, or driving a script. Police re-plan their route every 1.0 + 0.4 * random() s; here
@@ -328,6 +330,33 @@ def item_samples(world, graph):
     return rows
 
 
+def train_samples(world):
+    from game.car import player_car
+    from game.train import Train
+    t = Train(world)
+    rows = []
+    rng = random.Random(17)
+    if t.total <= 0:
+        return rows
+    for k in range(12):
+        t.active, t.dir, t.cars = True, (1, -1)[k % 2], 6 + k % 6
+        t.s = rng.uniform(t.lo + 50, t.hi - 50)
+        t._cache = None
+        for u in t.units():
+            rows.append(("unit", "%.4f" % t.s, str(t.dir), str(t.cars), str(u.idx), "%.5f" % u.x, "%.5f" % u.y,
+                         "%.6f" % u.heading, u.kind))
+        for u in t.units()[::3]:                              # cars at spots in, beside and near the blocks
+            for da, db in ((0.0, 0.5), (3.0, 1.9), (-4.0, -2.2), (0.0, 4.5)):
+                x = u.x + u.forward[0] * da + u.right[0] * db
+                y = u.y + u.forward[1] * da + u.right[1] * db
+                car = player_car(0, x, y, 0.3)
+                car.vx, car.vy = 5.0, -2.0
+                hit = t.push_out(car)
+                rows.append(("push", "%.4f" % t.s, str(t.dir), str(t.cars), "%.5f" % x, "%.5f" % y, "%.5f" % car.x,
+                             "%.5f" % car.y, "%.5f" % car.vx, "%.5f" % car.vy, "%.5f" % hit))
+    return rows
+
+
 class _Half:
     """A stand-in for random.Random whose random() is always 0.5 (the police's re-planning interval)."""
     def random(self):
@@ -452,6 +481,12 @@ def main(argv=None):
             f.write("\t".join(r) + "\n")
     print("wrote items.tsv: %d boxes, %d shot steps" % (sum(1 for r in rows if r[0] == "box"),
                                                        sum(1 for r in rows if r[0] == "shot")))
+    rows = train_samples(world)
+    with open(os.path.join(args.out, "train.tsv"), "w") as f:
+        for r in rows:
+            f.write("\t".join(r) + "\n")
+    print("wrote train.tsv: %d train blocks, %d push-outs" % (sum(1 for r in rows if r[0] == "unit"),
+                                                             sum(1 for r in rows if r[0] == "push")))
     rows = police_runs(world, graph)
     with open(os.path.join(args.out, "police.csv"), "w") as f:
         f.write("run,step,car,x,y,heading,vx,vy\n")

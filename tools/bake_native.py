@@ -42,6 +42,9 @@ File format (little-endian; the C++ loader is src/world/map_file.cpp in the nati
           2 tour 3 courthouse), f64 x y (at the kerb), str label
     TOUR  Heritage Tour spots (the landmarks _make_tour visits): u32 n, per spot: f64 x y (in the near lane), str label
     SPRT  VS race finishes (game/battle.py sprint_targets): u32 n, per landmark: f64 x y, str label
+    RAIL  the rail line: u32 ways, per way: u32 points, points x f32 (x y)     (drawn as rail beds)
+    TRAN  the train's run (game/train.py Train: the ways stitched into one line, and the stretch either side of
+          town it runs): u32 points, points x f64 (x y), f64 lo hi (metres along the line)
     ADDR  real civic addresses (data/addresses.json, NS Civic Address File, OGL-NS): u32 n, per address: f32 x y,
           str number, u32 street (index into NAME)
 
@@ -249,6 +252,13 @@ def bake(world, source=""):
         struct.pack("<B2d", roles[h.role], h.x, h.y) + _str(h.label) for h in hubs)))
     chunks.append(_chunk("TOUR", struct.pack("<I", len(spots)) + b"".join(
         struct.pack("<2d", x, y) + _str(label) for label, x, y in spots)))
+    rails = [r["points"] for r in world.rails if len(r["points"]) >= 2]
+    chunks.append(_chunk("RAIL", struct.pack("<I", len(rails)) + b"".join(
+        struct.pack("<I", len(pts)) + b"".join(struct.pack("<2f", p[0], p[1]) for p in pts) for pts in rails)))
+    from game.train import Train
+    train = Train(world)
+    chunks.append(_chunk("TRAN", struct.pack("<I", len(train.chain)) + b"".join(
+        struct.pack("<2d", p[0], p[1]) for p in train.chain) + struct.pack("<2d", train.lo, train.hi)))
     from game.battle import sprint_targets
     targets = sprint_targets(world)
     chunks.append(_chunk("SPRT", struct.pack("<I", len(targets)) + b"".join(
