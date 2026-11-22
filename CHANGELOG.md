@@ -21,6 +21,8 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
   positions and push-outs (`train.tsv`).
 - The baked map carries each road's paint and sidewalk class and the downtown cells where sidewalks are brick
   (`PANT`, from `game/streetdetail.py`), for the native game's street look.
+- A road with no posted speed limit is baked with speed 0 (it was 50), so the native game's speed-limit sign uses the
+  Python game's defaults by road type.
 
 ## [1.0.3] - 2026-11-22
 Traffic no longer gets stuck at all-way junctions, and the native C++ game's map gains the road graph and junction

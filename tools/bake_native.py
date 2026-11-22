@@ -17,7 +17,7 @@ File format (little-endian; the C++ loader is src/world/map_file.cpp in the nati
     NAME  u32 n, n x str                                  (street names; str = u32 length + UTF-8 bytes)
     TERR  f32 x0 y0 step, u32 nx ny, f32 base unit, u16[nx*ny] heights (h = base + unit * v, rows south to north)
     ROAD  u32 n, per road: u8 type (0 lane 1 side 2 main), u8 service (0 none 1 driveway 2 track 3 other),
-          u8 flags (1 one-way, 2 bridge, 4 lift/deck, 8 tunnel, 16 turnaround), u8 lanes, f32 width, f32 speed km/h,
+          u8 flags (1 one-way, 2 bridge, 4 lift/deck, 8 tunnel, 16 turnaround), u8 lanes, f32 width, f32 posted speed km/h (0: none posted),
           u32 name, u32 points, points x f32 (x y)
     SPAN  u32 n, per deck: u32 road index, f32 width, f32 lift, u32 points, points x f32 (x y h-above-ground)
     BLDG  u32 n, per building: f32 wall height, f32 roof height, u8 roof (0 flat 1 gable 2 hip 3 cone 4 mansard),
@@ -180,7 +180,7 @@ def bake(world, source=""):
         pts = r["points"]
         body.append(struct.pack("<4B2f2I", TYPES.get(r.get("type"), 0), SERVICE.get(r.get("service"), 3), flags,
                                 min(255, int(r.get("lanes") or 0)), float(r.get("width", 7.0)),
-                                float(r.get("speed") or 50), name_ix[r.get("name") or ""], len(pts)))
+                                float(r.get("speed") or 0), name_ix[r.get("name") or ""], len(pts)))
         body.append(b"".join(struct.pack("<ff", p[0], p[1]) for p in pts))
     chunks.append(_chunk("ROAD", b"".join(body)))
     body = [struct.pack("<I", len(world.spans))]
