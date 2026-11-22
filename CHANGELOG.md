@@ -15,6 +15,8 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 - The North Nova Scotia Highlanders mural was on the Dominion Building (98 Victoria St E). It is now on the wall
   facing the corner of Ratchford and Havelock Streets, where Veterans Affairs Canada's memorial inventory places it;
   a real-map test checks the spot.
+- Graffiti tags no longer land on a wall with a mural (one covered part of The Great Amherst Mystery), in the game and
+  in the native bake.
 
 ## [1.0.5] - 2026-11-22
 
