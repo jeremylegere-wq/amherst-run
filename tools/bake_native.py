@@ -59,6 +59,9 @@ File format (little-endian; the C++ loader is src/world/map_file.cpp in the nati
           u8 rgb[3] x 4 (door, shutters, plaque, plinth), f32 window height, f32 plinth height (0 none),
           f32 chimney place along the ridge (-1..1; -9 none), i8 dormer side (+1/-1 of the ridge's left normal),
           u8 shop storeys (0 from the height), u8 shop walls n, n x u16 (walls with a shop front)
+    PARK  hand-placed parked cars (data/map_edits.json "cars"; game/render3d.py parked_cars): u32 n, per car:
+          f32 x y heading (map radians), str model (game/car.py MODELS; "sedan" if unknown), u8 body rgb[3],
+          u8 roof rgb[3]. Their collision circles are already in PROP (car_block)
     ADDR  real civic addresses (data/addresses.json, NS Civic Address File, OGL-NS): u32 n, per address: f32 x y,
           str number, u32 street (index into NAME)
 
@@ -322,6 +325,15 @@ def bake(world, source=""):
         count += 1
     chunks.append(_chunk("BLDG", struct.pack("<I", count) + b"".join(body)))
     chunks.append(_chunk("BDET", struct.pack("<I", count) + b"".join(details)))
+    from game.car import MODELS
+    parked = getattr(world, "parked", ())
+    body = [struct.pack("<I", len(parked))]
+    for c in parked:
+        col = tuple(c.get("colour") or (90, 94, 102))
+        body.append(struct.pack("<3f", float(c["x"]), float(c["y"]), float(c["heading"]))
+                    + _str(c.get("model") if c.get("model") in MODELS else "sedan")
+                    + struct.pack("<6B", *col, *tuple(c.get("roof_colour") or col)))
+    chunks.append(_chunk("PARK", b"".join(body)))
     polys = []
     for kind, group, col in (("water", world.water, st["water"]), ("park", world.parks, st.get("park", st["grass"])),
                              ("lot", world.lots, st["road"]["side"]),

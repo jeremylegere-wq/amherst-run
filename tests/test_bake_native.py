@@ -122,6 +122,15 @@ class Bake(unittest.TestCase):
         (chimney,) = struct.unpack_from("<f", ch["BDET"], 4 + size + struct.calcsize("<6B2hf12B2f"))
         self.assertEqual(chimney, 0.5)
 
+    def test_parked_cars(self):
+        w = self.world()
+        w.parked = [{"x": 12.0, "y": -40.0, "heading": 1.5, "model": "crv", "colour": [70, 74, 82]}]
+        ch = B.read_chunks(B.bake(w, source="test")[0])
+        (n, x, y, hd, ln) = struct.unpack_from("<I3fI", ch["PARK"])
+        self.assertEqual((n, x, y, ln), (1, 12.0, -40.0, 3))
+        self.assertEqual(ch["PARK"][20:23], b"crv")
+        self.assertEqual(tuple(ch["PARK"][23:29]), (70, 74, 82, 70, 74, 82))   # the roof takes the body colour
+
     def test_unknown_file_is_refused(self):
         with self.assertRaises(ValueError):
             B.read_chunks(b"NOPE" + bytes(8))
