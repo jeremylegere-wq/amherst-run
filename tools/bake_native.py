@@ -25,6 +25,11 @@ File format (little-endian; the C++ loader is src/world/map_file.cpp in the nati
           u32 points, points x f32 (x y), u32 triangles, triangles x u16[3] (footprint, indices into its points)
     POLY  u32 n, per area: u8 kind (0 water 1 park 2 lot 3 land use), u8 rgb[3], u32 points, points x f32 (x y),
           u32 triangles, triangles x u16[3]
+    PROP  u32 kinds, kinds x str (tree, lamp, pole, ...), u32 n, per prop: u8 kind, u8 colour index (trees),
+          u8 rgb[3] (own colour, 0 0 0 if none), u8 flags (1: a segment follows), f32 x y,
+          u16 height cm, u16 radius cm, u16 collision radius cm, i16 heading mrad, [f32 x2 y2 if flags & 1]
+          Every prop of the map: the fixed ones (lamps, poles, signs, hydrants, gravestones, fences, parked-car blocks)
+          and every tree (LiDAR or woods), planted cell by cell in one fixed order (plant_everything)
 
 Version 1. Bump VERSION whenever the layout changes; the C++ loader refuses versions it does not know.
 """
@@ -201,9 +206,48 @@ def bake(world, source=""):
                 c = _lerp_rgb(AREA_COLOURS.get(p.get("kind"), AREA_COLOURS["grass"]), st["park"], 0.35)
             polys.append(struct.pack("<4B", POLY_KIND[kind], *_rgb(c, st["grass"])) + _poly_payload(pts, tris))
     chunks.append(_chunk("POLY", struct.pack("<I", len(polys)) + b"".join(polys)))
+    payload, nprops = _props_payload(world)
+    chunks.append(_chunk("PROP", payload))
     data = b"AMR1" + struct.pack("<II", VERSION, len(chunks)) + b"".join(chunks)
     return data, {"roads": len(world.roads), "spans": len(world.spans), "buildings": count, "dropped": dropped,
-                  "polygons": len(polys), "bytes": len(data)}
+                  "polygons": len(polys), "props": nprops, "bytes": len(data)}
+
+
+def plant_everything(world):
+    """Plant the trees of every prop cell of the map, row by row from the south-west, and keep them all.
+
+    The Python game plants a cell's trees when you first come near it, avoiding trees already planted beside it, so
+    which trees stand right at a cell's edge depends on the order you drove in. Planting in one fixed order gives one
+    fixed forest: the baked map uses it, and so do the golden drives, so both games hit the same trees."""
+    import game.world as W
+    W.WOODS_CELLS_KEPT = 10 ** 9                       # keep every cell's trees (the game forgets old ones)
+    if not getattr(world, "_streaming", False):
+        return
+    x0, y0, x1, y1 = world.bounds
+    for gy in range(int(y0 // W.CELL) - 1, int(y1 // W.CELL) + 2):
+        for gx in range(int(x0 // W.CELL) - 1, int(x1 // W.CELL) + 2):
+            if (gx, gy) not in world._woods_made:
+                world._make_woods(gx, gy)
+
+
+def _props_payload(world):
+    plant_everything(world)
+    props = [p for cell in sorted(world._prop_grid) for p in world._prop_grid[cell]]
+    kinds = sorted({p["kind"] for p in props})
+    kix = {k: i for i, k in enumerate(kinds)}
+
+    def cm(v):
+        return max(0, min(65535, int(round(float(v or 0.0) * 100))))
+    out = [struct.pack("<I", len(kinds)) + b"".join(_str(k) for k in kinds) + struct.pack("<I", len(props))]
+    for p in props:
+        seg = "x2" in p and "y2" in p
+        rgb = _rgb(p.get("colour"), (0, 0, 0))
+        head = max(-32767, min(32767, int(round(float(p.get("heading") or 0.0) * 1000))))
+        out.append(struct.pack("<2B3BB2f3Hh", kix[p["kind"]], int(p.get("c") or 0) & 255, *rgb, 1 if seg else 0,
+                               float(p["x"]), float(p["y"]), cm(p.get("h")), cm(p.get("r")), cm(p.get("cr")), head))
+        if seg:
+            out.append(struct.pack("<2f", float(p["x2"]), float(p["y2"])))
+    return b"".join(out), len(props)
 
 
 def read_chunks(data):
@@ -236,9 +280,9 @@ def main(argv=None):
     with open(tmp, "wb") as f:
         f.write(data)
     os.replace(tmp, args.out)
-    print("wrote %s: %d roads, %d overpass decks, %d buildings (%d dropped), %d areas, %.1f MB"
+    print("wrote %s: %d roads, %d overpass decks, %d buildings (%d dropped), %d areas, %d props, %.1f MB"
           % (args.out, info["roads"], info["spans"], info["buildings"], info["dropped"], info["polygons"],
-             info["bytes"] / 1e6))
+             info["props"], info["bytes"] / 1e6))
     return 0
 
 

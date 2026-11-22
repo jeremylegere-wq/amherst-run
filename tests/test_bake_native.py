@@ -40,6 +40,21 @@ class Triangulate(unittest.TestCase):
         self.assertEqual(B._clean([[0, 0], [1, 0], [1, 1], [0, 0]]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
 
 
+class Props(unittest.TestCase):
+    def test_props_are_written_with_their_kinds(self):
+        w = Bake().world()
+        w._prop_grid[(0, 0)].append({"kind": "tree", "x": 5.0, "y": 6.0, "h": 7.25, "r": 2.5, "cr": 0.4, "c": 2})
+        w._prop_grid[(1, 0)].append({"kind": "fence", "x": 40.0, "y": 1.0, "x2": 50.0, "y2": 1.0, "h": 1.1, "r": 0,
+                                     "cr": 0})
+        payload, n = B._props_payload(w)
+        self.assertEqual(n, 2)
+        (nk,) = struct.unpack_from("<I", payload)
+        self.assertEqual(nk, 2)                               # fence, tree (sorted)
+        off = 4 + sum(4 + len(k) for k in ("fence", "tree")) + 4
+        kind, c, r, g, b, flags, x, y, h, rad, cr, head = struct.unpack_from("<2B3BB2f3Hh", payload, off)
+        self.assertEqual((kind, c, x, y, h, rad, cr), (1, 2, 5.0, 6.0, 725, 250, 40))
+
+
 class Bake(unittest.TestCase):
     def world(self):
         roads = [{"type": "main", "width": 9, "name": "Main St", "points": [[-200, 0], [-25, 0]]},
@@ -88,6 +103,9 @@ class Bake(unittest.TestCase):
         self.assertEqual((bh, rh, roof), (7.5, 2.0, 1))
         self.assertEqual(struct.unpack_from("<3B", ch["BLDG"], 4 + 10), (10, 20, 30))
         self.assertEqual(info["polygons"], 1)
+        (nkinds,) = struct.unpack_from("<I", ch["PROP"])
+        self.assertEqual(nkinds, 0)                            # this little world has no props
+        self.assertEqual(B.bake(self.world(), source="test")[0], data)   # the same map bakes to the same bytes
 
     def test_unknown_file_is_refused(self):
         with self.assertRaises(ValueError):

@@ -8,8 +8,8 @@ heights.csv   x, y, z_hint, ground, height_at   surface heights on the real map:
 drive.csv     run, step, throttle, brake, steer, handbrake, bumper, x, y, z, heading, vx, vy
               scripted drives with player 1's car (game/car.py physics, game/collision.py move_and_slide and
               settle_height, exactly as game/main.py steps the player at 60 Hz). Step 0 is the start; each later row
-              holds the inputs of that step and the state after it. Trees, poles and other props are left out (the
-              baked map has none yet), and so are traffic and police.
+              holds the inputs of that step and the state after it. Trees and props are planted exactly as the
+              baked map has them (bake_native.plant_everything); traffic and police are left out.
 
 Fixed seed, so the files only change when the map or the game's rules change.
 """
@@ -50,7 +50,11 @@ def _script(spec):
     return out
 
 
-# (name, start x, y or None for the spawn, heading or None for along the road, script)
+# a tree downtown (340.8, -842.8): start 25 m west of it and drive straight at it, then reverse and go round
+TREE_DRIVE = ("into_a_tree", 315.8, -842.8, 0.0,
+              [(3.0, 1, 0, 0.0, 0, 0), (1.5, 0, 1, 0.0, 0, 0), (2.0, 1, 0, 0.5, 0, 0)])
+
+# (name, start x, y or None for the spawn, heading (exact start) or None for along the nearest road, script)
 DRIVES = [
     ("spawn_into_house_and_back", None, None, None,
      [(2.0, 1, 0, 0.0, 0, 0), (1.0, 0, 0, 0.0, 0, 0), (3.0, 0, 1, -0.6, 0, 0), (2.0, 1, 0, 0.8, 0, 0)]),
@@ -63,6 +67,7 @@ DRIVES = [
      [(4.0, 1, 0, 0.0, 0, 0), (0.1, 1, 0, 0.9, 0, 1), (2.2, 1, 0, 0.9, 0, 1), (2.0, 1, 0, 0.0, 0, 0)]),
     ("hill_coast", -679.0, 445.0, None,
      [(3.0, 1, 0, 0.0, 0, 0), (5.0, 0, 0, 0.0, 0, 0)]),
+    TREE_DRIVE,
 ]
 
 
@@ -71,14 +76,16 @@ def drive_runs(world):
     from game.collision import move_and_slide, settle_height
     from game.main import start_on_road
     rows = []
-    world.props_near = lambda *a, **k: []                  # no props in the baked map yet
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    from bake_native import plant_everything
+    plant_everything(world)                               # the same trees as the baked map
     for name, sx, sy, sh, spec in DRIVES:
         if sx is None:
             x, y, h = world.spawn()
+        elif sh is not None:                                 # an exact start (aimed at something)
+            x, y, h = sx, sy, sh
         else:
             x, y, h = start_on_road(world, sx, sy)
-            if sh is not None:
-                h = sh
         car = player_car(0, x, y, h)
         car.z = world.height_at(x, y, world.ground(x, y))
         rows.append((name, 0, 0, 0, 0.0, 0, 0, car.x, car.y, car.z, car.heading, car.vx, car.vy))

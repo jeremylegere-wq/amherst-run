@@ -13,6 +13,11 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 - `tools/golden.py` also records five scripted drives of player 1's car (`drive.csv`: into a house, up an overpass,
   a handbrake turn, a power slide, a hill) for the native game's physics parity test.
 
+### Added (native map)
+- The baked map has every prop: about 455,000 trees and 10,000 lamps, poles, signs, hydrants, gravestones, fences
+  and parked-car blocks, planted in one fixed order (`plant_everything`) so the map file and the golden drives
+  have the same trees. A sixth golden drive hits a tree downtown.
+
 ### Fixed
 - The baked map now carries the wall colour and height the Python renderer actually uses (per-building material
   colours and default heights), so the native game's buildings match.
