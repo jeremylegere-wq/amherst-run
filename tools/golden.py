@@ -18,6 +18,10 @@ traffic.csv   run, step, car, pace, x, y, heading, vx, vy, steer, throttle, brak
               one with stop signs and an all-way one, from every approach. At each junction the driver takes the
               most likely turn (the largest of choose_next's weights, the first on a tie) instead of a random one,
               so the run repeats exactly.
+police.csv    run, step, car (0 = the player, then police), x, y, heading, vx, vy
+              police chases (game/ai.py drive_police at 20 Hz, game/town.py's physics step at 60 Hz) of a player
+              who is parked, or driving a script. Police re-plan their route every 1.0 + 0.4 * random() s; here
+              random() is always 0.5, so the run repeats exactly.
 
 Fixed seed, so the files only change when the map or the game's rules change.
 """
@@ -249,6 +253,73 @@ def traffic_runs(world, graph):
     return rows
 
 
+class _Half:
+    """A stand-in for random.Random whose random() is always 0.5 (the police's re-planning interval)."""
+    def random(self):
+        return 0.5
+
+
+# (name, seconds, heat active, v_cap, player start (x, y) or None for the spawn, player script, police starts
+# [(x, y, heading)] each put on the nearest lane heading that way)
+POLICE = [
+    ("box_in_a_parked_player", 25.0, True, 31.0, (331.25, -761.25), [(25.0, 0, 0, 0.0, 0, 0)],
+     [(331.0, -840.0, -1.5708)]),
+    ("chase_a_driving_player", 30.0, True, 31.0, (-1655.0, -2000.0),
+     [(10.0, 1, 0, 0.0, 0, 0), (3.0, 1, 0, 0.6, 0, 0), (17.0, 1, 0, 0.0, 0, 0)],
+     [(-1650.0, -2060.0, 1.5708), (-1640.0, -2120.0, 1.5708)]),
+    ("stand_down", 12.0, False, 26.0, (394.6, -835.8), [(12.0, 0, 0, 0.0, 0, 0)], [(394.0, -900.0, 1.5708)]),
+]
+
+
+def police_runs(world, graph):
+    from game.ai import AICar, PAL_POLICE, drive_police
+    from game.car import player_car
+    from game.collision import collide_cars, move_and_slide, settle_height
+    from game.main import start_on_road
+    rows = []
+    for name, secs, active, v_cap, pstart, script, starts in POLICE:
+        x, y, h = start_on_road(world, *pstart)
+        player = player_car(0, x, y, h)
+        player.z = world.height_at(x, y, world.ground(x, y))
+        cops = []
+        for cx, cy, ch in starts:
+            eid, s = start_edge(graph, cx, cy, ch)
+            lx, ly, lh = graph.lane_point(eid, s)
+            c = AICar("police", PAL_POLICE, lx, ly, lh)
+            c.z = world.height_at(lx, ly, 0.0)
+            c.path_t = 0.5                                       # (the town staggers this with random())
+            c.vx, c.vy = math.cos(lh) * 10.0, math.sin(lh) * 10.0
+            cops.append(c)
+        rng, acc = _Half(), 0.0
+        everyone = [player] + cops
+        for k, c in enumerate(everyone):
+            rows.append((name, 0, k, c.x, c.y, c.heading, c.vx, c.vy))
+        for step, (th, br, st, hb, bu) in enumerate(_script(script), 1):
+            px, py = player.x, player.y                          # game/main.py: the player first
+            player.update(DT, bool(th), bool(br), st, bool(hb), on_road=world.on_road(player.x, player.y),
+                          bumper=bool(bu))
+            move_and_slide(player, world, px, py, thorough=True)
+            settle_height(player, world, DT)
+            acc += DT                                            # then game/town.py Town.update
+            if acc >= CONTROL_DT:
+                ctl, acc = acc, 0.0
+                for c in cops:
+                    drive_police(c, graph, world, player, cops, ctl, rng, active, v_cap)
+            for c in cops:
+                px, py = c.x, c.y
+                c.update(DT, c.throttle, c.brake, c.steer, False, world.on_road(c.x, c.y))
+                move_and_slide(c, world, px, py)
+                settle_height(c, world, DT)
+            for i in range(len(everyone)):
+                for j in range(i + 1, len(everyone)):
+                    a, b = everyone[i], everyone[j]
+                    if abs(a.x - b.x) <= 6.0 and abs(a.y - b.y) <= 6.0:
+                        collide_cars(a, b)
+            for k, c in enumerate(everyone):
+                rows.append((name, step, k, c.x, c.y, c.heading, c.vx, c.vy))
+    return rows
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--map", default=os.path.join(ROOT, "data", "amherst_map.json"))
@@ -294,6 +365,12 @@ def main(argv=None):
         for r in rows:
             f.write("%s,%d,%d,%.4f,%.6f,%.6f,%.8f,%.6f,%.6f,%.6f,%d,%d,%d\n" % r)
     print("wrote traffic.csv: %d runs, %d rows" % (len(TRAFFIC), len(rows)))
+    rows = police_runs(world, graph)
+    with open(os.path.join(args.out, "police.csv"), "w") as f:
+        f.write("run,step,car,x,y,heading,vx,vy\n")
+        for r in rows:
+            f.write("%s,%d,%d,%.6f,%.6f,%.8f,%.6f,%.6f\n" % r)
+    print("wrote police.csv: %d runs, %d rows" % (len(POLICE), len(rows)))
     return 0
 
 

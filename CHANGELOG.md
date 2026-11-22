@@ -9,6 +9,10 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+### Added
+- `tools/golden.py` records police chases (`police.csv`: boxing in a parked player, two police chasing a driving
+  one, standing down) for the native game's parity tests.
+
 ## [1.0.3] - 2026-11-22
 Traffic no longer gets stuck at all-way junctions, and the native C++ game's map gains the road graph and junction
 rules its traffic drives by.
