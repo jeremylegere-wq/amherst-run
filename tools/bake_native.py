@@ -30,6 +30,10 @@ File format (little-endian; the C++ loader is src/world/map_file.cpp in the nati
           u16 height cm, u16 radius cm, u16 collision radius cm, i16 heading mrad, [f32 x2 y2 if flags & 1]
           Every prop of the map: the fixed ones (lamps, poles, signs, hydrants, gravestones, fences, parked-car blocks)
           and every tree (LiDAR or woods), planted cell by cell in one fixed order (plant_everything)
+    GRPH  the road graph the AI drives on (game/roadgraph.py RoadGraph of the loaded roads, built exactly as the game
+          builds it): u32 nodes, nodes x f64 (x y), u32 edges, per edge: u32 a b, u8 type (0 lane 1 side 2 main),
+          u8 pad[3], f32 width, f32 speed km/h (posted), u32 name. Edge order is the game's; a node's outgoing edges
+          are the edges starting at it, in that order.
 
 Version 1. Bump VERSION whenever the layout changes; the C++ loader refuses versions it does not know.
 """
@@ -208,6 +212,19 @@ def bake(world, source=""):
     chunks.append(_chunk("POLY", struct.pack("<I", len(polys)) + b"".join(polys)))
     payload, nprops = _props_payload(world)
     chunks.append(_chunk("PROP", payload))
+    from game.roadgraph import RoadGraph
+    graph = RoadGraph(world.roads)
+    for e in graph.edges:
+        if e.name not in name_ix:
+            name_ix[e.name] = len(names)
+            names.append(e.name)
+    body = [struct.pack("<I", len(graph.nodes)) + b"".join(struct.pack("<2d", x, y) for x, y in graph.nodes),
+            struct.pack("<I", len(graph.edges))]
+    for e in graph.edges:
+        body.append(struct.pack("<2I4B2fI", e.a, e.b, TYPES.get(e.rtype, 1), 0, 0, 0, float(e.width), float(e.kmh),
+                                name_ix[e.name]))
+    chunks.append(_chunk("GRPH", b"".join(body)))
+    chunks[1] = _chunk("NAME", struct.pack("<I", len(names)) + b"".join(_str(n) for n in names))
     data = b"AMR1" + struct.pack("<II", VERSION, len(chunks)) + b"".join(chunks)
     return data, {"roads": len(world.roads), "spans": len(world.spans), "buildings": count, "dropped": dropped,
                   "polygons": len(polys), "props": nprops, "bytes": len(data)}

@@ -9,6 +9,11 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+### Added
+- The baked map carries the road graph the traffic drives on (`GRPH`: nodes and directed edges exactly as
+  `game/roadgraph.py` builds them), and `tools/golden.py` records A* routes, nearest-node lookups and three
+  civilian-driver runs (`paths.csv`, `nearest.csv`, `traffic.csv`) for the native game's parity tests.
+
 ## [1.0.2] - 2026-11-22
 A fuller map for the native C++ game: every tree and post, and golden drives for its car physics. The Python game
 itself is unchanged.
