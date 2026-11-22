@@ -212,7 +212,8 @@ def shot_lighthouse():
 
 
 def shot_murals():
-    save("murals", grid([look_at(414.9, -911.7, 118, 26, 3), look_at(400.4, -983.4, 25, 28, 3)], 2), scale=2)
+    # the Highlanders mural on the wall facing Ratchford and Havelock Streets; the Mystery mural on LaPlanche St
+    save("murals", grid([look_at(506.8, -890.7, 116, 24, 3), look_at(400.4, -983.4, 25, 28, 3)], 2), scale=2)
 
 
 def shot_parking():

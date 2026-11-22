@@ -218,7 +218,7 @@ def _decorations(world, baked_index):
     """DECO entries: every graffiti tag and mural shape as world-space triangles (see the format above)."""
     import random
     from game import archetypes, murals
-    from game.render3d import Renderer3D, default_height, graffiti_ok
+    from game.render3d import Renderer3D, default_height, graffiti_ok, mural_wall
     out = []
 
     def shape(bi, nx, ny, rgb, pts3):
@@ -250,9 +250,10 @@ def _decorations(world, baked_index):
         bi = baked_index[i]
         house = archetypes.classify(b, i)
         if h >= 3.0 and graffiti_ok(b, abs(area)) and not (house and house["kind"] != "apartment"):
+            painted = mural_wall(walls, b.get("mural"))
             for wi, (x0, y0, x1, y1, nx, ny) in enumerate(walls):  # _prep_graffiti: about 30% of the longer walls
                 L = math.hypot(x1 - x0, y1 - y0)
-                if L < 5.0:
+                if L < 5.0 or wi == painted:                     # (never over a mural)
                     continue
                 rng = random.Random(i * 7919 + wi * 104729 + 17)
                 if rng.random() > 0.3:

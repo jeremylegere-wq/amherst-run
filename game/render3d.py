@@ -263,6 +263,16 @@ def default_height(b, i, area):
     return 7.5 + j * 2.5              # big footprints are shops and plants: wide but low
 
 
+def mural_wall(walls, mural):
+    """Index of the wall a building's mural is painted on: the one facing most nearly its "facing" bearing.
+    walls: (x0, y0, x1, y1, nx, ny, ...) with outward normals. None when there is no mural."""
+    if not mural or not walls:
+        return None
+    fb = math.radians(mural.get("facing", 0.0))
+    fx, fy = math.sin(fb), -math.cos(fb)
+    return max(range(len(walls)), key=lambda k: walls[k][4] * fx + walls[k][5] * fy)
+
+
 def graffiti_ok(b, area):
     """Tags go on downtown and commercial walls, not on family homes or landmarks (heritage and civic buildings)."""
     kind = b.get("tags", {}).get("building", "")
@@ -606,9 +616,10 @@ class Renderer3D:
             house = archetypes.classify(self.world.buildings[i], i)
             if house and house["kind"] != "apartment":
                 continue                                        # nobody tags the side of a family home
+            painted = mural_wall(walls, self.world.buildings[i].get("mural"))
             for wi, (x0, y0, x1, y1, _nx, _ny, _sh) in enumerate(walls):
                 L = math.hypot(x1 - x0, y1 - y0)
-                if L < 5.0:
+                if L < 5.0 or wi == painted:                    # (nobody tags over a mural)
                     continue
                 rng = random.Random(i * 7919 + wi * 104729 + 17)
                 if rng.random() > 0.3:
@@ -1745,10 +1756,7 @@ class Renderer3D:
         m = self.extras[idx]["mural"]
         key = ("mural", idx)
         if key not in self._houses:
-            fb = math.radians(m.get("facing", 0.0))
-            fx, fy = math.sin(fb), -math.cos(fb)
-            walls = self.buildings[idx][4]
-            self._houses[key] = max(range(len(walls)), key=lambda k: walls[k][4] * fx + walls[k][5] * fy)
+            self._houses[key] = mural_wall(self.buildings[idx][4], m)
         if wi != self._houses[key] or m.get("design") not in murals.DESIGNS:
             return
         whole = self.buildings[idx][4][wi]

@@ -243,6 +243,25 @@ class Murals(unittest.TestCase):
         self.assertTrue(got & red, "no poppies: the mural is not on the north wall")
 
 
+    def test_no_graffiti_over_a_mural(self):
+        """Tags go on about 30% of long commercial walls by a fixed seed; never on the wall with a mural."""
+        pygame.init()
+        data = make_sample_map.build()
+        data["roads"] = [{"type": "side", "width": 8, "name": "Elm St", "points": [[-400, 0], [400, 0]]}]
+        data["buildings"] = [{"points": [[x, 10], [x + 30, 10], [x + 30, 40], [x, 40]], "tags": {"building": "yes"},
+                              "height": 10.0, "material": "brick",
+                              "mural": {"design": "highlanders", "facing": float(f), "width": 8.0}}
+                             for x in range(-380, 380, 40) for f in (0,)]
+        world = World(data)
+        r = R.Renderer3D(world, style="street")
+        tagged_mural_walls = 0
+        for i, tags in r.graffiti.items():
+            painted = R.mural_wall(r.buildings[i][4], world.buildings[i]["mural"])
+            tagged_mural_walls += painted in tags
+        self.assertTrue(r.graffiti, "no tags at all: the test proves nothing")
+        self.assertEqual(tagged_mural_walls, 0)
+
+
 class ParkingLots(unittest.TestCase):
     LOT = {"points": [[0, 0], [60, 0], [60, 40], [0, 40]], "area": 2400}
 

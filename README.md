@@ -61,8 +61,8 @@ hardware so far.
 
 ![Downtown murals](docs/images/murals.png)
 
-The North Nova Scotia Highlanders memorial on the Town Hall and The Great Amherst Mystery on LaPlanche St (simplified
-panels of the real murals).
+The North Nova Scotia Highlanders memorial at the corner of Ratchford and Havelock Streets and The Great Amherst Mystery
+on LaPlanche St (simplified panels of the real murals).
 
 ## How Amherst was built
 The town is assembled in layers, each from the best source available, and each layer can be refreshed with its own tool:

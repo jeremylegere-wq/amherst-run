@@ -129,6 +129,30 @@ class RealAmherstTests(unittest.TestCase):
         cls.world = World.load(REAL_MAP)
         cls.graph = RoadGraph(cls.world.roads)
 
+    def test_highlanders_mural_is_at_ratchford_and_havelock(self):
+        """The North Nova Scotia Highlanders mural is on the wall facing the corner of Ratchford and Havelock Streets
+        (Veterans Affairs Canada's memorial inventory, GPS 45.8341327, -64.21131), not on the Dominion Building."""
+        import json
+        from game import mapedits
+        with open(REAL_MAP) as f:
+            px, py = mapedits._project(json.load(f)["meta"], 45.8341327, -64.21131)
+        found = [b for b in self.world.buildings if (b.get("mural") or {}).get("design") == "highlanders"]
+        self.assertEqual(len(found), 1)
+        b = found[0]
+        self.assertNotEqual(b.get("label"), "Dominion Building")
+        m, pts = b["mural"], [tuple(p) for p in b["points"]]
+        area = sum(pts[k][0] * pts[k - 1][1] - pts[k - 1][0] * pts[k][1] for k in range(len(pts)))
+        fx, fy = math.sin(math.radians(m["facing"])), -math.cos(math.radians(m["facing"]))
+        walls = []
+        for a, c in zip(pts, pts[1:] + pts[:1]):   # outward normals (render3d's rule), as the renderer picks the wall
+            L = math.hypot(c[0] - a[0], c[1] - a[1]) or 1.0
+            nx, ny = ((c[1] - a[1]) / L, -(c[0] - a[0]) / L) if area < 0 else (-(c[1] - a[1]) / L, (c[0] - a[0]) / L)
+            walls.append((a, c, nx, ny))
+        a, c, nx, ny = max(walls, key=lambda w: w[2] * fx + w[3] * fy)
+        mx, my = (a[0] + c[0]) / 2, (a[1] + c[1]) / 2
+        self.assertGreater((px - mx) * nx + (py - my) * ny, 0, "the listed spot is not in front of the painted wall")
+        self.assertLess(math.hypot(px - mx, py - my), 20.0, "the painted wall is not at the listed corner")
+
     def test_spawn_is_on_a_road(self):
         x, y, _h = self.world.spawn()
         self.assertTrue(self.world.on_road(x, y))

@@ -266,14 +266,7 @@
      407.54,
      -922.69
     ],
-    "_note": "98 Victoria St E, Dominion Public Building 1934-36 (Canadian Register of Historic Places): light grey sandstone front, two storeys. East wall: North Nova Scotia Highlanders memorial mural (WWII), an original simplified panel.",
-    "mural": {
-     "design": "highlanders",
-     "facing": 118.0,
-     "width": 6.0,
-     "bottom": 1.8,
-     "top": 9.0
-    }
+    "_note": "98 Victoria St E, Dominion Public Building 1934-36 (Canadian Register of Historic Places): light grey sandstone front, two storeys."
    },
    {
     "material": "sandstone",
@@ -2096,7 +2089,15 @@
     "at": [
      496.88,
      -897.25
-    ]
+    ],
+    "_note": "North Nova Scotia Highlanders mural (WWII, 2005): on the wall facing the corner of Ratchford and Havelock Streets (Veterans Affairs Canada, National Inventory of Canadian Military Memorials; GPS 45.8341327, -64.21131), an original simplified panel. It was on the Dominion Building by mistake until 1.0.6.",
+    "mural": {
+     "design": "highlanders",
+     "facing": 116.0,
+     "width": 10.0,
+     "bottom": 0.9,
+     "top": 6.4
+    }
    },
    {
     "points": [
