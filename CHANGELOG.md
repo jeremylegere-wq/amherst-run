@@ -9,6 +9,10 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-11-22
+Traffic no longer gets stuck at all-way junctions, and the native C++ game's map gains the road graph and junction
+rules its traffic drives by.
+
 ### Added
 - The baked map carries the road graph the traffic drives on (`GRPH`: nodes and directed edges exactly as
   `game/roadgraph.py` builds them), and `tools/golden.py` records A* routes, nearest-node lookups and three
@@ -334,7 +338,8 @@ First public release.
 - The sandstone-corner bank entry in the landmark file matched every bank; it now matches by name only.
 - Buildings no longer draw through one another or through cars: each wall piece is depth-sorted on its own.
 
-[Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/jeremylegere-wq/amherst-run/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/jeremylegere-wq/amherst-run/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/jeremylegere-wq/amherst-run/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.4.0...v1.0.0
