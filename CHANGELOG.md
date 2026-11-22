@@ -9,14 +9,16 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
 
 ## [Unreleased]
 
-### Added
-- `tools/golden.py` also records five scripted drives of player 1's car (`drive.csv`: into a house, up an overpass,
-  a handbrake turn, a power slide, a hill) for the native game's physics parity test.
+## [1.0.2] - 2026-11-22
+A fuller map for the native C++ game: every tree and post, and golden drives for its car physics. The Python game
+itself is unchanged.
 
-### Added (native map)
-- The baked map has every prop: about 455,000 trees and 10,000 lamps, poles, signs, hydrants, gravestones, fences
-  and parked-car blocks, planted in one fixed order (`plant_everything`) so the map file and the golden drives
-  have the same trees. A sixth golden drive hits a tree downtown.
+### Added
+- The baked map (`amherst.amr`) has every prop: about 455,000 trees and 10,000 lamps, poles, signs, hydrants,
+  gravestones, fences and parked-car blocks, planted in one fixed order (`tools/bake_native.py` `plant_everything`)
+  so the map file and the golden drives have the same trees.
+- `tools/golden.py` also records six scripted drives of player 1's car (`drive.csv`: into a house, up an overpass,
+  a handbrake turn, a power slide, a hill, into a tree) for the native game's physics parity test.
 
 ### Fixed
 - The baked map now carries the wall colour and height the Python renderer actually uses (per-building material
@@ -319,7 +321,8 @@ First public release.
 - The sandstone-corner bank entry in the landmark file matched every bank; it now matches by name only.
 - Buildings no longer draw through one another or through cars: each wall piece is depth-sorted on its own.
 
-[Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/jeremylegere-wq/amherst-run/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/jeremylegere-wq/amherst-run/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/jeremylegere-wq/amherst-run/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.4.0...v1.0.0
 [0.4.0]: https://github.com/jeremylegere-wq/amherst-run/compare/v0.3.1...v0.4.0
