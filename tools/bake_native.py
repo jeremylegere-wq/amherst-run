@@ -42,6 +42,10 @@ File format (little-endian; the C++ loader is src/world/map_file.cpp in the nati
           2 tour 3 courthouse), f64 x y (at the kerb), str label
     TOUR  Heritage Tour spots (the landmarks _make_tour visits): u32 n, per spot: f64 x y (in the near lane), str label
     SPRT  VS race finishes (game/battle.py sprint_targets): u32 n, per landmark: f64 x y, str label
+    PANT  road paint and sidewalks (game/streetdetail.py): u32 roads, per road (ROAD order) u8 marking (0 none
+          1 double yellow 2 dashed yellow 3 dashed white 4 highway 5 edges), u8 sidewalk where not downtown (0 edge
+          shoulder 1 concrete), u8 gravel; then u32 cells, cells x i32 (cx cy): the 40 m cells near downtown, where a
+          concrete sidewalk is brick instead
     RAIL  the rail line: u32 ways, per way: u32 points, points x f32 (x y)     (drawn as rail beds)
     TRAN  the train's run (game/train.py Train: the ways stitched into one line, and the stretch either side of
           town it runs): u32 points, points x f64 (x y), f64 lo hi (metres along the line)
@@ -252,6 +256,15 @@ def bake(world, source=""):
         struct.pack("<B2d", roles[h.role], h.x, h.y) + _str(h.label) for h in hubs)))
     chunks.append(_chunk("TOUR", struct.pack("<I", len(spots)) + b"".join(
         struct.pack("<2d", x, y) + _str(label) for label, x, y in spots)))
+    from game import streetdetail as SD
+    downtown = SD.Downtown(world.buildings)
+    body = [struct.pack("<I", len(world.roads))]
+    for r in world.roads:
+        body.append(struct.pack("<3B", SD.marking(r), 1 if SD.sidewalk(r, False) == SD.CONCRETE else 0,
+                                1 if r.get("surface") == "gravel" else 0))
+    cells = sorted({(cx + i, cy + j) for cx, cy in downtown.cells for i in (-1, 0, 1) for j in (-1, 0, 1)})
+    body.append(struct.pack("<I", len(cells)) + b"".join(struct.pack("<2i", cx, cy) for cx, cy in cells))
+    chunks.append(_chunk("PANT", b"".join(body)))
     rails = [r["points"] for r in world.rails if len(r["points"]) >= 2]
     chunks.append(_chunk("RAIL", struct.pack("<I", len(rails)) + b"".join(
         struct.pack("<I", len(pts)) + b"".join(struct.pack("<2f", p[0], p[1]) for p in pts) for pts in rails)))

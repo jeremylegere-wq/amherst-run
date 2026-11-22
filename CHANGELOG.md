@@ -19,6 +19,8 @@ set `__version__` in `game/__init__.py` to `X.Y.Z`, and update the link referenc
   and the flight of a puck and a seeker (`items.tsv`) for the native game's battle tests.
 - The baked map carries the rail ways and the train's run (`RAIL`, `TRAN`), and `tools/golden.py` records train block
   positions and push-outs (`train.tsv`).
+- The baked map carries each road's paint and sidewalk class and the downtown cells where sidewalks are brick
+  (`PANT`, from `game/streetdetail.py`), for the native game's street look.
 
 ## [1.0.3] - 2026-11-22
 Traffic no longer gets stuck at all-way junctions, and the native C++ game's map gains the road graph and junction
