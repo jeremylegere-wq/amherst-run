@@ -18,6 +18,10 @@ traffic.csv   run, step, car, pace, x, y, heading, vx, vy, steer, throttle, brak
               one with stop signs and an all-way one, from every approach. At each junction the driver takes the
               most likely turn (the largest of choose_next's weights, the first on a tie) instead of a random one,
               so the run repeats exactly.
+jobs.tsv      tab-separated: "address" x y text (MissionManager.address: the real civic number on that street within 45 m,
+              else a made-up one), "route" ax ay bx by metres (_route_len, which sizes delivery time limits), and
+              "tour" hub label (targets as label@x@y joined by |) time-limit reward (_make_tour from each tour hub;
+              only tours that need no random fill-in checkpoints)
 police.csv    run, step, car (0 = the player, then police), x, y, heading, vx, vy
               police chases (game/ai.py drive_police at 20 Hz, game/town.py's physics step at 60 Hz) of a player
               who is parked, or driving a script. Police re-plan their route every 1.0 + 0.4 * random() s; here
@@ -253,6 +257,48 @@ def traffic_runs(world, graph):
     return rows
 
 
+def job_samples(world, graph, n=300, seed=13):
+    """jobs.tsv rows (see the module doc)."""
+    from game.missions import MissionManager
+
+    class _Town:
+        cops = True
+    _Town.graph = graph
+    mm = MissionManager(world, _Town())
+    rng = random.Random(seed)
+    rows = []
+    for _ in range(n):                                  # addresses at random lane points
+        x, y, _h = graph.lane_point(rng.randrange(len(graph.edges)), 0.0)
+        x += rng.uniform(-8, 8)
+        y += rng.uniform(-8, 8)
+        rows.append(("address", "%.3f" % x, "%.3f" % y, mm.address(x, y)))
+    routes = 0
+    while routes < 100:                                 # route lengths between points 100-900 m apart
+        a = graph.nodes[rng.randrange(len(graph.nodes))]
+        b = graph.nodes[rng.randrange(len(graph.nodes))]
+        if not 100 < math.hypot(a[0] - b[0], a[1] - b[1]) < 900:
+            continue
+        routes += 1
+        a = (a[0] + rng.uniform(-10, 10), a[1] + rng.uniform(-10, 10))
+        b = (b[0] + rng.uniform(-10, 10), b[1] + rng.uniform(-10, 10))
+        rows.append(("route", "%.3f" % a[0], "%.3f" % a[1], "%.3f" % b[0], "%.3f" % b[1], "%.4f" % mm._route_len(a, b)))
+
+    class _NoDice:
+        def __getattr__(self, name):
+            raise LookupError("needs random checkpoints")
+    for hub in mm.all_hubs:
+        if hub.role != "tour":
+            continue
+        mm.rng = _NoDice()
+        try:
+            m = mm._make_tour(hub)
+        except LookupError:
+            continue
+        targets = "|".join("%s@%.4f@%.4f" % (t.label, t.x, t.y) for t in m.targets)
+        rows.append(("tour", hub.label, targets, "%.4f" % m.time_limit, str(m.reward)))
+    return rows
+
+
 class _Half:
     """A stand-in for random.Random whose random() is always 0.5 (the police's re-planning interval)."""
     def random(self):
@@ -365,6 +411,12 @@ def main(argv=None):
         for r in rows:
             f.write("%s,%d,%d,%.4f,%.6f,%.6f,%.8f,%.6f,%.6f,%.6f,%d,%d,%d\n" % r)
     print("wrote traffic.csv: %d runs, %d rows" % (len(TRAFFIC), len(rows)))
+    rows = job_samples(world, graph)
+    with open(os.path.join(args.out, "jobs.tsv"), "w") as f:
+        for r in rows:
+            f.write("\t".join(r) + "\n")
+    print("wrote jobs.tsv: %d addresses, %d routes, %d tours" % tuple(sum(1 for r in rows if r[0] == k)
+                                                                     for k in ("address", "route", "tour")))
     rows = police_runs(world, graph)
     with open(os.path.join(args.out, "police.csv"), "w") as f:
         f.write("run,step,car,x,y,heading,vx,vy\n")

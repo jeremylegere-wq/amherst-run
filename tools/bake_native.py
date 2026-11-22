@@ -38,6 +38,11 @@ File format (little-endian; the C++ loader is src/world/map_file.cpp in the nati
           stop signs): u32 nodes, per node u8 is-junction, f64 box radius, f64 stopping distance from the node;
           u32 edges, per edge u8 control of the junction it drives into (0 priority 1 signal 2 stop 3 yield
           4 all-way), u8 signal phase (0 east-west, 1 north-south)
+    HUBS  job hubs (game/missions.py MissionManager._find_hubs): u32 n, per hub: u8 role (0 deliveries 1 getaway
+          2 tour 3 courthouse), f64 x y (at the kerb), str label
+    TOUR  Heritage Tour spots (the landmarks _make_tour visits): u32 n, per spot: f64 x y (in the near lane), str label
+    ADDR  real civic addresses (data/addresses.json, NS Civic Address File, OGL-NS): u32 n, per address: f32 x y,
+          str number, u32 street (index into NAME)
 
 Version 1. Bump VERSION whenever the layout changes; the C++ loader refuses versions it does not know.
 """
@@ -237,6 +242,23 @@ def bake(world, source=""):
     body.append(struct.pack("<I", len(graph.edges)))
     body.append(b"".join(struct.pack("<2B", ctl[jn.control.get(e)], jn.phase.get(e, 0)) for e in range(len(graph.edges))))
     chunks.append(_chunk("JNCT", b"".join(body)))
+    hubs, spots = _jobs(world, graph)
+    roles = {"deliveries": 0, "getaway": 1, "tour": 2, "courthouse": 3}
+    chunks.append(_chunk("HUBS", struct.pack("<I", len(hubs)) + b"".join(
+        struct.pack("<B2d", roles[h.role], h.x, h.y) + _str(h.label) for h in hubs)))
+    chunks.append(_chunk("TOUR", struct.pack("<I", len(spots)) + b"".join(
+        struct.pack("<2d", x, y) + _str(label) for label, x, y in spots)))
+    addrs = []
+    if getattr(world, "addresses", None) is not None:
+        for cell in sorted(world.addresses.grid):
+            addrs.extend(world.addresses.grid[cell])
+    for _x, _y, _num, street in addrs:
+        if street not in name_ix:
+            name_ix[street] = len(names)
+            names.append(street)
+    chunks.append(_chunk("ADDR", struct.pack("<I", len(addrs)) + b"".join(
+        struct.pack("<2f", x, y) + _str(num) + struct.pack("<I", name_ix[street]) for x, y, num, street in addrs)))
+    chunks[1] = _chunk("NAME", struct.pack("<I", len(names)) + b"".join(_str(n) for n in names))
     chunks[1] = _chunk("NAME", struct.pack("<I", len(names)) + b"".join(_str(n) for n in names))
     data = b"AMR1" + struct.pack("<II", VERSION, len(chunks)) + b"".join(chunks)
     return data, {"roads": len(world.roads), "spans": len(world.spans), "buildings": count, "dropped": dropped,
@@ -278,6 +300,31 @@ def _props_payload(world):
         if seg:
             out.append(struct.pack("<2f", float(p["x2"]), float(p["y2"])))
     return b"".join(out), len(props)
+
+
+def _jobs(world, graph):
+    """(hubs, tour spots) exactly as game/missions.py finds them."""
+    from game.missions import MissionManager, _centroid
+
+    class _Town:                                      # the bits of game/town.py MissionManager reads at start
+        cops = True
+    _Town.graph = graph
+    mm = MissionManager(world, _Town())
+    spots = []
+    for b in world.buildings:                         # the same list _make_tour builds, as curb points
+        if b.get("landmark") and b.get("label"):
+            spots.append((b["label"], _centroid(b["points"])))
+    for p in getattr(world, "parks", ()):
+        if p.get("landmark") == "square":
+            spots.append((p.get("label", "Square"), _centroid(p["points"])))
+    for p in world.props:
+        if p["kind"] in ("cenotaph", "lighthouse") and p.get("label"):
+            spots.append((p["label"], (p["x"], p["y"])))
+    out = []
+    for label, (x, y) in spots:
+        cx, cy = mm._curb_point(x, y)
+        out.append((label, cx, cy))
+    return mm.all_hubs, out
 
 
 def read_chunks(data):
